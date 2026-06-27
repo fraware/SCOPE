@@ -1,0 +1,12 @@
+{
+  "trigger_id": "AKTA-REVTRIG-000001",
+  "akta_record_id": "AKTA-SAR-000001",
+  "requested_action": "update_active_protocol",
+  "requested_tool": "protocol_editor.update_active_protocol",
+  "scientific_action_type": "A5_protocol_modification",
+  "akta_admissibility": "review_required",
+  "scientific_context": {
+    "protocol_version": "protocol_v3",
+    "evidence_state": "E2_preliminary_signal"
+  }
+}
