@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/pf_scope_obligation.schema.json",
+  "title": "PF-Core SCOPE Obligation",
+  "type": "object",
+  "required": [
+    "obligation_version",
+    "grant_id",
+    "permitted_tools",
+    "blocked_tools",
+    "approved_scope",
+    "verification_mode"
+  ],
+  "properties": {
+    "obligation_version": { "type": "string" },
+    "grant_id": { "type": "string" },
+    "grant_hash": { "type": "string", "pattern": "^sha256:" },
+    "permitted_tools": { "type": "array", "items": { "type": "string" } },
+    "blocked_tools": { "type": "array", "items": { "type": "string" } },
+    "approved_scope": { "type": "string" },
+    "max_responsibility_level": { "type": "string" },
+    "constraints": { "type": "object" },
+    "expiration": { "type": "object" },
+    "verification_mode": { "type": "string" },
+    "grant_signature": { "type": "string" },
+    "signature_algorithm": { "type": "string" },
+    "signed_payload_hash": { "type": "string" }
+  },
+  "additionalProperties": true
+}
