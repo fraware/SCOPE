@@ -8,6 +8,7 @@ from typing import Any
 
 import jsonschema
 
+from scope.config import require_signatures
 from scope.errors import GrantValidationError
 from scope.expiration import check_expiration
 from scope.hash import attach_hash
@@ -64,7 +65,7 @@ class GrantEngine:
 
         grant: dict[str, Any] = {
             "grant_id": _new_grant_id(),
-            "grant_version": "0.1",
+            "grant_version": "0.2",
             "created_at": _utc_now(),
             "source": {
                 "packet_id": packet["packet_id"],
@@ -100,6 +101,19 @@ class GrantEngine:
             },
         }
         grant = attach_hash(grant, "grant_hash")
+        if require_signatures() and not decision.get("decision_signature"):
+            raise GrantValidationError(
+                "Production mode requires signed decision before grant issue"
+            )
+        sig_fields = (
+            "grant_signature",
+            "reviewer_public_key_ref",
+            "signature_algorithm",
+            "signed_payload_hash",
+        )
+        for field in sig_fields:
+            if decision.get(field):
+                grant[field] = decision[field]
         self.validate(grant)
         return grant
 
@@ -108,20 +122,26 @@ class GrantEngine:
         grant: dict[str, Any],
         requested_tool: str,
         context: dict[str, Any] | None = None,
-    ) -> bool:
+        *,
+        ledger_used: bool = False,
+        ledger_revoked: bool = False,
+    ) -> tuple[bool, str | None]:
         context = context or {}
+        if ledger_revoked:
+            return False, "Grant revoked per ledger"
+        used = ledger_used or context.get("grant_used", False)
         try:
-            check_expiration(grant, context, used=context.get("grant_used", False))
-        except Exception:
-            return False
+            check_expiration(grant, context, used=used)
+        except Exception as exc:
+            return False, str(exc)
 
         auth = grant.get("authorization", {})
         if requested_tool in auth.get("blocked_tools", []):
-            return False
+            return False, f"Tool '{requested_tool}' is blocked by grant"
         allowed = auth.get("allowed_tools", [])
         if requested_tool not in allowed:
-            return False
-        return True
+            return False, f"Tool '{requested_tool}' not in allowed tools"
+        return True, None
 
     def validate(self, grant: dict[str, Any]) -> None:
         if self.schema:
