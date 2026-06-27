@@ -60,6 +60,7 @@ class ScopeLedger:
         event_type: str,
         *,
         actor_id: str | None = None,
+        reviewer_role: str | None = None,
         packet_id: str | None = None,
         decision_id: str | None = None,
         grant_id: str | None = None,
@@ -73,6 +74,8 @@ class ScopeLedger:
         }
         if actor_id:
             event["actor_id"] = actor_id
+        if reviewer_role:
+            event["reviewer_role"] = reviewer_role
         if packet_id:
             event["packet_id"] = packet_id
         if decision_id:
@@ -91,6 +94,44 @@ class ScopeLedger:
 
     def events(self) -> list[dict[str, Any]]:
         return list(self._events)
+
+    def events_for_grant(self, grant_id: str) -> list[dict[str, Any]]:
+        return [e for e in self._events if e.get("grant_id") == grant_id]
+
+    def grant_used(self, grant_id: str) -> bool:
+        """Return True if ledger records prior grant_used for this grant."""
+        return any(e.get("event_type") == "grant_used" for e in self.events_for_grant(grant_id))
+
+    def grant_revoked(self, grant_id: str) -> bool:
+        return any(e.get("event_type") == "grant_revoked" for e in self.events_for_grant(grant_id))
+
+    def grant_status(self, grant_id: str) -> dict[str, Any]:
+        events = self.events_for_grant(grant_id)
+        used = self.grant_used(grant_id)
+        revoked = self.grant_revoked(grant_id)
+        expired = any(e.get("event_type") == "grant_expired" for e in events)
+        status = "active"
+        reason = None
+        if revoked:
+            status = "revoked"
+            rev = next(e for e in events if e.get("event_type") == "grant_revoked")
+            reason = (rev.get("metadata") or {}).get("reason", "Grant revoked")
+        elif expired:
+            status = "expired"
+            exp = next(e for e in events if e.get("event_type") == "grant_expired")
+            reason = (exp.get("metadata") or {}).get("reason", "Grant expired")
+        elif used:
+            status = "consumed"
+            reason = "Single-use grant already consumed per ledger"
+        return {
+            "grant_id": grant_id,
+            "status": status,
+            "used": used,
+            "revoked": revoked,
+            "expired": expired,
+            "reason": reason,
+            "event_count": len(events),
+        }
 
     def save(self, path: str | Path) -> None:
         path = Path(path)
