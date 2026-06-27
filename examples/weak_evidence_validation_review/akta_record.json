@@ -1,0 +1,27 @@
+{
+  "record_id": "AKTA-SAR-S03",
+  "decision_id": "AKTA-DEC-S03",
+  "requested_action": "plan_validation_experiment",
+  "requested_tool": "experiment_planner.create_validation_plan",
+  "scientific_action_type": "A6_experimental_planning",
+  "responsibility_level": "R5_experimental_planning",
+  "domain": "materials",
+  "deployment_profile": "P3_experiment_planner",
+  "evidence_state": "E1_weak_signal",
+  "validation_status": "V0_unvalidated",
+  "decision": {
+    "admissibility": "review_required"
+  },
+  "review_artifacts": {
+    "ai_output_summary": "Proposed validation run based on weak preliminary signal.",
+    "evidence_report_ref": "VSA-REP-000012"
+  },
+  "akta_constraints": {
+    "blocked_tools": ["robot_queue.submit"],
+    "allowed_next_steps": [
+      "approve validation draft only",
+      "request additional evidence",
+      "reject experimental plan"
+    ]
+  }
+}

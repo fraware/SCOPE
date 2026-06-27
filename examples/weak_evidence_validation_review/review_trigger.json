@@ -1,0 +1,17 @@
+{
+  "trigger_id": "TRIG-S03",
+  "akta_record_id": "AKTA-SAR-S03",
+  "akta_decision_id": "AKTA-DEC-S03",
+  "requested_action": "plan_validation_experiment",
+  "requested_tool": "experiment_planner.create_validation_plan",
+  "scientific_action_type": "A6_experimental_planning",
+  "responsibility_level": "R5_experimental_planning",
+  "akta_admissibility": "review_required",
+  "scientific_context": {
+    "domain": "materials",
+    "evidence_state": "E1_weak_signal",
+    "validation_status": "V0_unvalidated",
+    "protocol_version": "protocol_v2",
+    "project_id": "demo_project"
+  }
+}
