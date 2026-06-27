@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/scope_quorum_policy.schema.json",
+  "title": "SCOPE Quorum Policy",
+  "type": "object",
+  "required": ["mode"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["require_all", "require_any", "n_of_m", "safety_veto", "statistical_co_review"]
+    },
+    "required_roles": { "type": "array", "items": { "type": "string" } },
+    "n": { "type": "integer", "minimum": 1 },
+    "safety_veto_roles": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}
