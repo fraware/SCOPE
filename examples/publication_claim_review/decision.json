@@ -1,0 +1,5 @@
+{
+  "type": "approve",
+  "approved_scope": "publication_claim",
+  "rationale": "Publication reviewer alone without required domain co-review."
+}

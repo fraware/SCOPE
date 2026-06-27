@@ -1,0 +1,12 @@
+{
+  "trigger_id": "TRIG-S07",
+  "akta_record_id": "AKTA-SAR-S07",
+  "requested_action": "draft_publication_claim",
+  "requested_tool": "publication.draft_claim",
+  "scientific_action_type": "A10_publication_or_claim_escalation",
+  "akta_admissibility": "review_required",
+  "scientific_context": {
+    "domain": "materials",
+    "evidence_state": "E2_preliminary_signal"
+  }
+}

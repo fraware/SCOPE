@@ -1,0 +1,14 @@
+{
+  "record_id": "AKTA-SAR-S07",
+  "decision_id": "AKTA-DEC-S07",
+  "requested_action": "draft_publication_claim",
+  "requested_tool": "publication.draft_claim",
+  "scientific_action_type": "A10_publication_or_claim_escalation",
+  "responsibility_level": "R7_publication_claim",
+  "decision": {
+    "admissibility": "review_required"
+  },
+  "review_artifacts": {
+    "ai_output_summary": "Draft claim for publication based on preliminary results."
+  }
+}
