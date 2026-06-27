@@ -8,13 +8,15 @@ from typing import Any
 
 import jsonschema
 
-from scope.errors import DecisionValidationError, ScopeValidationError
+from scope.config import require_signatures
+from scope.errors import DecisionValidationError, RoleValidationError, ScopeValidationError
 from scope.hash import attach_hash
 from scope.policy import PolicyStore
 from scope.roles import reviewer_info, validate_reviewer_for_action, validate_reviewer_for_scope
 from scope.scopes import (
     is_stronger,
     resolve_requested_scope_from_tool,
+    scope_rank,
     validate_approval_not_overbroad,
     validate_scope,
 )
@@ -38,6 +40,9 @@ class DecisionEngine:
         packet: dict[str, Any],
         reviewer: dict[str, Any],
         decision_input: dict[str, Any],
+        *,
+        skip_co_review: bool = False,
+        allowed_veto_roles: list[str] | None = None,
     ) -> dict[str, Any]:
         action_type = packet["review_request"]["scientific_action_type"]
         decision_type = decision_input["type"]
@@ -48,13 +53,22 @@ class DecisionEngine:
             )
 
         rev = reviewer_info(reviewer, self.policy)
-        validate_reviewer_for_action(
-            rev["role"],
-            action_type,
-            self.policy,
-            required_roles=packet["review_request"]["required_review_roles"],
-        )
-        self._validate_co_review(action_type, rev["role"], decision_input)
+        try:
+            validate_reviewer_for_action(
+                rev["role"],
+                action_type,
+                self.policy,
+                required_roles=packet["review_request"]["required_review_roles"],
+            )
+        except RoleValidationError:
+            if not (
+                allowed_veto_roles
+                and rev["role"] in allowed_veto_roles
+                and decision_type == "reject"
+            ):
+                raise
+        if not skip_co_review:
+            self._validate_co_review(action_type, rev["role"], decision_input)
 
         decision_body: dict[str, Any] = {
             "type": decision_type,
@@ -68,20 +82,22 @@ class DecisionEngine:
             validate_scope(approved_scope, self.policy)
             validate_reviewer_for_scope(rev["role"], approved_scope, self.policy)
 
+            requested_scope = self._resolve_requested_scope(packet, decision_input)
             requested_tool = packet["review_request"].get("requested_tool")
-            inferred_scope = resolve_requested_scope_from_tool(requested_tool, self.policy)
+            self._validate_unknown_scope_approval(
+                approved_scope, requested_scope, rev["role"], packet
+            )
             validate_approval_not_overbroad(
                 approved_scope,
-                inferred_scope,
+                requested_scope,
                 requested_tool,
                 self.policy,
             )
 
-            # Reject overbroad: approved scope must not exceed what packet implies
-            if inferred_scope and is_stronger(approved_scope, inferred_scope, self.policy):
+            if requested_scope and is_stronger(approved_scope, requested_scope, self.policy):
                 raise ScopeValidationError(
-                    f"Overbroad approval: '{approved_scope}' exceeds implied need "
-                    f"'{inferred_scope}'"
+                    f"Overbroad approval: '{approved_scope}' exceeds requested "
+                    f"'{requested_scope}'"
                 )
 
             decision_body["approved_scope"] = approved_scope
@@ -115,8 +131,56 @@ class DecisionEngine:
             )
 
         decision = attach_hash(decision, "decision_hash")
+        if require_signatures() and not decision_input.get("decision_signature"):
+            raise ScopeValidationError("Production mode requires decision_signature")
+        sig_fields = (
+            "decision_signature",
+            "reviewer_public_key_ref",
+            "signature_algorithm",
+            "signed_payload_hash",
+        )
+        for field in sig_fields:
+            if decision_input.get(field):
+                decision[field] = decision_input[field]
+
         self.validate(decision)
         return decision
+
+    def _resolve_requested_scope(
+        self, packet: dict[str, Any], decision_input: dict[str, Any]
+    ) -> str | None:
+        review_request = packet["review_request"]
+        if decision_input.get("manual_requested_scope"):
+            scope = str(decision_input["manual_requested_scope"])
+            validate_scope(scope, self.policy)
+            review_request["requested_scope"] = scope
+            review_request["scope_inference_source"] = "manual_override"
+            return scope
+        explicit = review_request.get("requested_scope")
+        if explicit:
+            return str(explicit)
+        tool = review_request.get("requested_tool")
+        inferred = resolve_requested_scope_from_tool(tool, self.policy) if tool else None
+        return str(inferred) if inferred else None
+
+    def _validate_unknown_scope_approval(
+        self,
+        approved_scope: str,
+        requested_scope: str | None,
+        role: str,
+        packet: dict[str, Any],
+    ) -> None:
+        inference = packet["review_request"].get("scope_inference_source", "unknown")
+        if requested_scope or inference != "unknown":
+            return
+        clarification_rank = scope_rank("clarification_only", self.policy)
+        if scope_rank(approved_scope, self.policy) <= clarification_rank:
+            return
+        if role == "system_owner":
+            return
+        raise ScopeValidationError(
+            "Cannot approve scope stronger than clarification_only when requested scope is unknown"
+        )
 
     def _validate_co_review(
         self, action_type: str, role: str, decision_input: dict[str, Any]
@@ -144,8 +208,6 @@ class DecisionEngine:
         blocked_tools = packet.get("akta_constraints", {}).get("blocked_tools", [])
         rejected = list(stronger)
         for tool in blocked_tools:
-            from scope.scopes import resolve_requested_scope_from_tool
-
             s = resolve_requested_scope_from_tool(tool, self.policy)
             if s and s not in rejected:
                 rejected.append(s)
