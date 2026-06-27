@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/pcs_scope_artifact.schema.json",
+  "title": "PCS SCOPE Artifact Bundle",
+  "type": "object",
+  "required": ["manifest_version", "artifacts", "hashes", "source"],
+  "properties": {
+    "manifest_version": { "type": "string" },
+    "artifacts": { "type": "array", "items": { "type": "string" } },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "pattern": "^sha256:" }
+    },
+    "source": { "type": "object" },
+    "ledger_excerpt": { "type": "array" },
+    "quality_warnings": { "type": "array" },
+    "decision_signature": { "type": "string" },
+    "grant_signature": { "type": "string" }
+  },
+  "additionalProperties": true
+}
