@@ -25,4 +25,9 @@ SCOPE measures whether review is meaningful.
 scope quality report --ledger logs/scope_events.jsonl --out report.json
 ```
 
+Implemented in v0.2: core rates, scope quality rates, reviewer confidence mean,
+approval without comment rate, and approval under minimum review time.
+Deferred to v0.3: outcome metrics, burden metrics, and confidence variance.
+See `policy/quality_metrics.yaml` for `v0_2_status` per metric.
+
 Thresholds are configured in `policy/quality_metrics.yaml`.
