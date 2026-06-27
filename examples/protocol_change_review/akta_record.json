@@ -1,0 +1,31 @@
+{
+  "record_id": "AKTA-SAR-000001",
+  "decision_id": "AKTA-DEC-000001",
+  "requested_action": "update_active_protocol",
+  "requested_tool": "protocol_editor.update_active_protocol",
+  "scientific_action_type": "A5_protocol_modification",
+  "responsibility_level": "R4_methodological_modification",
+  "domain": "materials",
+  "deployment_profile": "P4_protocol_drafting_assistant",
+  "domain_overlay": "materials_v0.1",
+  "evidence_state": "E2_preliminary_signal",
+  "validation_status": "V1_literature_supported",
+  "verification_status": "Q0_unchecked",
+  "decision": {
+    "admissibility": "review_required"
+  },
+  "review_artifacts": {
+    "ai_output_summary": "The agent adjusted the timing window and acceptance threshold.",
+    "ai_output_ref": "sha256:abc123",
+    "evidence_report_ref": "VSA-REP-000004",
+    "protocol_diff_ref": "sha256:def456"
+  },
+  "akta_constraints": {
+    "blocked_tools": ["robot_queue.submit", "lab_scheduler.prioritize"],
+    "allowed_next_steps": [
+      "approve protocol draft for validation review",
+      "request additional evidence",
+      "reject active protocol update"
+    ]
+  }
+}

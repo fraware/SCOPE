@@ -1,0 +1,15 @@
+{
+  "type": "approve_narrower_scope",
+  "approved_scope": "protocol_draft",
+  "rationale": "Evidence supports draft-only validation; active protocol update not justified.",
+  "rejected_scope": [
+    "active_protocol_update",
+    "robot_queue_submission",
+    "queue_prioritization"
+  ],
+  "required_modifications": [
+    "restore original acceptance threshold",
+    "label output as validation-only"
+  ],
+  "reviewer_confidence": 0.78
+}

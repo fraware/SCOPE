@@ -1,0 +1,20 @@
+{
+  "trigger_id": "AKTA-REVTRIG-000001",
+  "akta_record_id": "AKTA-SAR-000001",
+  "akta_decision_id": "AKTA-DEC-000001",
+  "requested_action": "update_active_protocol",
+  "requested_tool": "protocol_editor.update_active_protocol",
+  "scientific_action_type": "A5_protocol_modification",
+  "responsibility_level": "R4_methodological_modification",
+  "akta_admissibility": "review_required",
+  "scientific_context": {
+    "domain": "materials",
+    "deployment_profile": "P4_protocol_drafting_assistant",
+    "domain_overlay": "materials_v0.1",
+    "evidence_state": "E2_preliminary_signal",
+    "validation_status": "V1_literature_supported",
+    "verification_status": "Q0_unchecked",
+    "protocol_version": "protocol_v3",
+    "project_id": "demo_project"
+  }
+}
