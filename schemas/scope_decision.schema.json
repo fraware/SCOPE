@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/scope_decision.schema.json",
+  "title": "SCOPE Decision",
+  "type": "object",
+  "required": ["decision_id", "packet_id", "decided_at", "reviewer", "decision", "decision_hash"],
+  "properties": {
+    "decision_id": { "type": "string" },
+    "packet_id": { "type": "string" },
+    "decided_at": { "type": "string" },
+    "reviewer": {
+      "type": "object",
+      "required": ["reviewer_id", "role"],
+      "properties": {
+        "reviewer_id": { "type": "string" },
+        "role": { "type": "string" },
+        "declared_expertise": { "type": "array", "items": { "type": "string" } },
+        "conflict_declared": { "type": "boolean" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["type", "rationale"],
+      "properties": {
+        "type": { "type": "string" },
+        "rationale": { "type": "string" },
+        "approved_scope": { "type": "string" },
+        "rejected_scope": { "type": "array", "items": { "type": "string" } },
+        "required_modifications": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "expiration": { "type": "object" },
+    "confidence": { "type": "object" },
+    "decision_hash": { "type": "string", "pattern": "^sha256:" }
+  },
+  "additionalProperties": true
+}

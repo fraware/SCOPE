@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/scope_grant.schema.json",
+  "title": "SCOPE Grant",
+  "type": "object",
+  "required": [
+    "grant_id",
+    "grant_version",
+    "created_at",
+    "source",
+    "authorization",
+    "constraints",
+    "expiration",
+    "provenance",
+    "grant_hash"
+  ],
+  "properties": {
+    "grant_id": { "type": "string" },
+    "grant_version": { "type": "string" },
+    "created_at": { "type": "string" },
+    "source": {
+      "type": "object",
+      "required": ["packet_id", "decision_id", "akta_record_id"],
+      "properties": {
+        "packet_id": { "type": "string" },
+        "decision_id": { "type": "string" },
+        "akta_record_id": { "type": "string" }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "required": ["approved_scope", "allowed_tools", "blocked_tools"],
+      "properties": {
+        "approved_scope": { "type": "string" },
+        "approved_actions": { "type": "array", "items": { "type": "string" } },
+        "allowed_tools": { "type": "array", "items": { "type": "string" } },
+        "blocked_tools": { "type": "array", "items": { "type": "string" } },
+        "max_responsibility_level": { "type": "string" }
+      }
+    },
+    "constraints": { "type": "object" },
+    "expiration": { "type": "object" },
+    "provenance": { "type": "object" },
+    "grant_hash": { "type": "string", "pattern": "^sha256:" }
+  },
+  "additionalProperties": true
+}

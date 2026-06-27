@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/scope_packet.schema.json",
+  "title": "SCOPE Packet",
+  "type": "object",
+  "required": [
+    "packet_id",
+    "packet_version",
+    "created_at",
+    "source",
+    "review_request",
+    "scientific_context",
+    "review_artifacts",
+    "akta_constraints",
+    "decision_options",
+    "packet_hash"
+  ],
+  "properties": {
+    "packet_id": { "type": "string" },
+    "packet_version": { "type": "string" },
+    "created_at": { "type": "string" },
+    "source": {
+      "type": "object",
+      "required": ["akta_record_id"],
+      "properties": {
+        "akta_record_id": { "type": "string" },
+        "akta_decision_id": { "type": "string" },
+        "review_trigger_id": { "type": "string" }
+      }
+    },
+    "review_request": {
+      "type": "object",
+      "required": [
+        "requested_action",
+        "requested_tool",
+        "scientific_action_type",
+        "akta_admissibility",
+        "required_review_roles"
+      ],
+      "properties": {
+        "requested_action": { "type": "string" },
+        "requested_tool": { "type": "string" },
+        "scientific_action_type": { "type": "string" },
+        "responsibility_level": { "type": "string" },
+        "akta_admissibility": { "type": "string" },
+        "required_review_roles": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "scientific_context": { "type": "object" },
+    "review_artifacts": { "type": "object" },
+    "akta_constraints": { "type": "object" },
+    "decision_options": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "packet_hash": { "type": "string", "pattern": "^sha256:" }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SCOPE Quality Report",
+  "type": "object",
+  "required": ["report_version", "metrics", "warnings"],
+  "properties": {
+    "report_version": { "type": "string" },
+    "policy_version": { "type": "string" },
+    "metrics": { "type": "object" },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["warning_type", "reason"],
+        "properties": {
+          "warning_type": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "event_counts": { "type": "object" }
+  }
+}

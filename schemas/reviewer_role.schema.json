@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reviewer Role",
+  "type": "object",
+  "required": ["role"],
+  "properties": {
+    "role": { "type": "string" },
+    "description": { "type": "string" },
+    "can_approve_scopes": { "type": "array", "items": { "type": "string" } }
+  }
+}

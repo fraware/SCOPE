@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Review Assignment",
+  "type": "object",
+  "required": ["action_type", "required_roles"],
+  "properties": {
+    "action_type": { "type": "string" },
+    "required_roles": { "type": "array", "items": { "type": "string" } }
+  }
+}

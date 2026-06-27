@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Expiration Rule",
+  "type": "object",
+  "properties": {
+    "mode": { "type": "string" },
+    "expires_on": { "type": "array", "items": { "type": "string" } },
+    "expires_after": { "type": "array", "items": { "type": "string" } }
+  }
+}

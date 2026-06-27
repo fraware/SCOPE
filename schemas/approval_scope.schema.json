@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Approval Scope",
+  "type": "object",
+  "required": ["scope"],
+  "properties": {
+    "scope": { "type": "string" },
+    "description": { "type": "string" },
+    "rank": { "type": "integer" }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SCOPE Ledger Event",
+  "type": "object",
+  "required": ["event_id", "timestamp", "event_type", "event_hash", "previous_event_hash"],
+  "properties": {
+    "event_id": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "event_type": { "type": "string" },
+    "actor_id": { "type": "string" },
+    "packet_id": { "type": "string" },
+    "decision_id": { "type": "string" },
+    "grant_id": { "type": "string" },
+    "metadata": { "type": "object" },
+    "event_hash": { "type": "string", "pattern": "^sha256:" },
+    "previous_event_hash": { "type": "string", "pattern": "^sha256:" }
+  }
+}
