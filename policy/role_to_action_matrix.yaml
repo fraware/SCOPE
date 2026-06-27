@@ -1,0 +1,36 @@
+version: scope-core-v0.1
+matrix:
+  A3_evidence_interpretation_consequential:
+    required_roles:
+      - domain_scientist
+      - statistical_reviewer
+    require_any: true
+  A4_recommendation:
+    required_roles:
+      - domain_scientist
+  A5_protocol_modification:
+    required_roles:
+      - protocol_owner
+  A6_experimental_planning:
+    required_roles:
+      - domain_scientist
+      - protocol_owner
+    require_all: true
+  A7_resource_or_queue_prioritization:
+    required_roles:
+      - principal_investigator
+      - lab_operations_lead
+    require_any: true
+  A8_tool_or_workflow_mutation:
+    required_roles:
+      - system_owner
+  A9_execution_adjacent_or_external_action:
+    required_roles:
+      - system_owner
+      - lab_operations_lead
+    require_all: true
+  A10_publication_or_claim_escalation:
+    required_roles:
+      - publication_reviewer
+      - domain_scientist
+    require_all: true

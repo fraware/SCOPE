@@ -1,0 +1,74 @@
+version: scope-core-v0.1
+scopes:
+  no_action:
+    allowed_tools: []
+    blocked_tools: ["*"]
+  clarification_only:
+    allowed_tools: ["comment.add"]
+    blocked_tools: ["robot_queue.submit", "protocol_editor.update_active_protocol"]
+  hypothesis_discussion:
+    allowed_tools: ["comment.add", "hypothesis.discuss"]
+    blocked_tools: ["robot_queue.submit", "protocol_editor.update_active_protocol"]
+  evidence_interpretation_only:
+    allowed_tools: ["evidence.interpret"]
+    blocked_tools: ["robot_queue.submit", "protocol_editor.update_active_protocol"]
+  draft_recommendation:
+    allowed_tools: ["recommendation.draft"]
+    blocked_tools: ["robot_queue.submit", "protocol_editor.update_active_protocol"]
+  protocol_draft:
+    allowed_tools: ["protocol_editor.draft_change"]
+    blocked_tools:
+      - protocol_editor.update_active_protocol
+      - lab_scheduler.prioritize
+      - robot_queue.submit
+  protocol_diff_review:
+    allowed_tools: ["protocol_editor.view_diff"]
+    blocked_tools:
+      - protocol_editor.update_active_protocol
+      - robot_queue.submit
+  single_validation_plan:
+    allowed_tools:
+      - experiment_planner.create_validation_plan
+      - protocol_editor.draft_change
+    blocked_tools:
+      - protocol_editor.update_active_protocol
+      - robot_queue.submit
+  single_validation_run_draft:
+    allowed_tools:
+      - experiment_planner.create_validation_plan
+      - protocol_editor.draft_change
+    blocked_tools:
+      - protocol_editor.update_active_protocol
+      - lab_scheduler.prioritize
+      - robot_queue.submit
+  active_protocol_update:
+    allowed_tools:
+      - protocol_editor.update_active_protocol
+      - protocol_editor.draft_change
+    blocked_tools:
+      - robot_queue.submit
+  single_run_queue_priority:
+    allowed_tools: ["lab_scheduler.prioritize"]
+    blocked_tools: ["robot_queue.submit"]
+  bounded_batch_priority:
+    allowed_tools: ["lab_scheduler.prioritize_batch"]
+    blocked_tools: ["robot_queue.submit"]
+  tool_permission_escalation:
+    allowed_tools: ["workflow.mutate_permissions"]
+    blocked_tools: ["robot_queue.submit"]
+  execution_payload_preparation:
+    allowed_tools: ["execution.prepare_payload"]
+    blocked_tools: ["robot_queue.submit"]
+  robot_queue_submission:
+    allowed_tools: ["robot_queue.submit"]
+    requires_roles:
+      - system_owner
+      - lab_operations_lead
+      - domain_scientist
+    blocked_tools: []
+  publication_claim:
+    allowed_tools: ["publication.draft_claim"]
+    blocked_tools: ["scientific_memory.import"]
+  scientific_memory_import:
+    allowed_tools: ["scientific_memory.import"]
+    blocked_tools: []

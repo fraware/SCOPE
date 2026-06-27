@@ -1,0 +1,54 @@
+version: scope-core-v0.1
+hierarchy:
+  - no_action
+  - clarification_only
+  - hypothesis_discussion
+  - evidence_interpretation_only
+  - draft_recommendation
+  - protocol_draft
+  - protocol_diff_review
+  - single_validation_plan
+  - single_validation_run_draft
+  - active_protocol_update
+  - single_run_queue_priority
+  - bounded_batch_priority
+  - tool_permission_escalation
+  - execution_payload_preparation
+  - robot_queue_submission
+  - publication_claim
+  - scientific_memory_import
+semantics:
+  no_action:
+    description: No authorized action; review only.
+  clarification_only:
+    description: Clarify or annotate without changing scientific state.
+  hypothesis_discussion:
+    description: Discuss hypotheses without operational effect.
+  evidence_interpretation_only:
+    description: Interpret evidence without downstream action.
+  draft_recommendation:
+    description: Non-binding recommendation draft.
+  protocol_draft:
+    description: Draft protocol changes without activation.
+  protocol_diff_review:
+    description: Review protocol diff without applying.
+  single_validation_plan:
+    description: One validation experiment plan.
+  single_validation_run_draft:
+    description: One validation run draft.
+  active_protocol_update:
+    description: Update the active protocol.
+  single_run_queue_priority:
+    description: Priority for a single run.
+  bounded_batch_priority:
+    description: Priority for a bounded batch.
+  tool_permission_escalation:
+    description: Escalated tool permissions.
+  execution_payload_preparation:
+    description: Prepare execution payload without submission.
+  robot_queue_submission:
+    description: Submit to robot queue.
+  publication_claim:
+    description: Escalate to publication claim.
+  scientific_memory_import:
+    description: Import into scientific memory.

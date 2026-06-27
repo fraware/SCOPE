@@ -1,0 +1,87 @@
+version: scope-core-v0.1
+roles:
+  domain_scientist:
+    description: Reviews scientific plausibility, domain assumptions, and interpretation.
+    can_approve_scopes:
+      - clarification_only
+      - hypothesis_discussion
+      - evidence_interpretation_only
+      - draft_recommendation
+      - protocol_draft
+      - single_validation_plan
+      - single_validation_run_draft
+      - publication_claim
+  protocol_owner:
+    description: Reviews protocol diffs, method changes, thresholds, and active protocol updates.
+    can_approve_scopes:
+      - clarification_only
+      - hypothesis_discussion
+      - protocol_draft
+      - protocol_diff_review
+      - single_validation_plan
+      - single_validation_run_draft
+      - active_protocol_update
+  statistical_reviewer:
+    description: Reviews statistical validity, uncertainty, and analysis assumptions.
+    can_approve_scopes:
+      - clarification_only
+      - evidence_interpretation_only
+      - draft_recommendation
+      - single_validation_plan
+  data_steward:
+    description: Reviews data provenance, privacy, consent, and data quality.
+    can_approve_scopes:
+      - clarification_only
+      - evidence_interpretation_only
+  instrument_owner:
+    description: Reviews instrument settings, calibration, and run compatibility.
+    can_approve_scopes:
+      - clarification_only
+      - protocol_draft
+      - single_validation_run_draft
+  lab_operations_lead:
+    description: Reviews queue changes, resource allocation, and operational feasibility.
+    can_approve_scopes:
+      - clarification_only
+      - single_run_queue_priority
+      - bounded_batch_priority
+      - execution_payload_preparation
+      - robot_queue_submission
+  principal_investigator:
+    description: Reviews consequential prioritization and strategic research direction.
+    can_approve_scopes:
+      - clarification_only
+      - draft_recommendation
+      - single_run_queue_priority
+      - bounded_batch_priority
+      - publication_claim
+  system_owner:
+    description: Reviews tool permissions, workflow mutation, and deployment escalation.
+    can_approve_scopes:
+      - clarification_only
+      - tool_permission_escalation
+      - execution_payload_preparation
+      - robot_queue_submission
+  safety_officer:
+    description: Reviews general lab safety and physical risk.
+    can_approve_scopes:
+      - clarification_only
+  biosecurity_reviewer:
+    description: Placeholder for domain-sensitive biological risk review.
+    can_approve_scopes:
+      - clarification_only
+  clinical_reviewer:
+    description: Placeholder for patient-facing or clinically relevant claims.
+    can_approve_scopes:
+      - clarification_only
+  ethics_reviewer:
+    description: Reviews human-subject, dual-use, or institutional ethics concerns.
+    can_approve_scopes:
+      - clarification_only
+  publication_reviewer:
+    description: Reviews claim escalation into papers, reports, and public communication.
+    can_approve_scopes:
+      - clarification_only
+      - draft_recommendation
+      - publication_claim
+      - scientific_memory_import
