@@ -25,6 +25,7 @@ dependencies = [
     "jsonschema>=4.21",
     "PyYAML>=6.0",
     "click>=8.1",
+    "cryptography>=42.0",
 ]
 
 
