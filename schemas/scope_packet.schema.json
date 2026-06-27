@@ -35,7 +35,8 @@
         "requested_tool",
         "scientific_action_type",
         "akta_admissibility",
-        "required_review_roles"
+        "required_review_roles",
+        "scope_inference_source"
       ],
       "properties": {
         "requested_action": { "type": "string" },
@@ -46,6 +47,11 @@
         "required_review_roles": {
           "type": "array",
           "items": { "type": "string" }
+        },
+        "requested_scope": { "type": "string" },
+        "scope_inference_source": {
+          "type": "string",
+          "enum": ["akta_trigger", "tool_registry", "manual_override", "unknown"]
         }
       }
     },
