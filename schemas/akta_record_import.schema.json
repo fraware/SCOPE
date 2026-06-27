@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/akta_record_import.schema.json",
+  "title": "AKTA Record Import",
+  "type": "object",
+  "properties": {
+    "record_id": { "type": "string" },
+    "decision_id": { "type": "string" },
+    "requested_action": { "type": "string" },
+    "requested_tool": { "type": "string" },
+    "scientific_action_type": { "type": "string" },
+    "responsibility_level": { "type": "string" },
+    "domain": { "type": "string" },
+    "deployment_profile": { "type": "string" },
+    "domain_overlay": { "type": "string" },
+    "evidence_state": { "type": "string" },
+    "validation_status": { "type": "string" },
+    "verification_status": { "type": "string" },
+    "requested_transition": {
+      "type": "object",
+      "properties": {
+        "requested_action": { "type": "string" },
+        "requested_tool": { "type": "string" }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "properties": {
+        "scientific_action_type": { "type": "string" },
+        "responsibility_level": { "type": "string" },
+        "evidence_state": { "type": "string" },
+        "validation_status": { "type": "string" },
+        "verification_status": { "type": "string" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "properties": {
+        "admissibility": { "type": "string" },
+        "blocked_tools": { "type": "array", "items": { "type": "string" } },
+        "next_admissible_steps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "review_artifacts": { "type": "object" },
+    "akta_constraints": { "type": "object" },
+    "scientific_context": { "type": "object" }
+  },
+  "additionalProperties": true
+}
