@@ -1,0 +1,42 @@
+{
+  "name": "weak_evidence_validation_review",
+  "valid": true,
+  "akta_record": {
+    "record_id": "AKTA-SAR-S03",
+    "scientific_action_type": "A6_experimental_planning",
+    "requested_action": "plan_validation_experiment",
+    "requested_tool": "experiment_planner.create_validation_plan",
+    "akta_constraints": {
+      "blocked_tools": ["robot_queue.submit"]
+    }
+  },
+  "akta_trigger": {
+    "trigger_id": "TRIG-S03",
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A6_experimental_planning",
+    "requested_action": "plan_validation_experiment",
+    "requested_tool": "experiment_planner.create_validation_plan",
+    "scientific_context": {
+      "evidence_state": "E1_weak_signal",
+      "protocol_version": "protocol_v2"
+    }
+  },
+  "reviewer": {
+    "reviewer_id": "rev_po",
+    "role": "protocol_owner"
+  },
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "single_validation_run_draft",
+    "rationale": "Weak evidence supports validation draft only.",
+    "co_reviewers": ["domain_scientist"]
+  },
+  "expected_scope": "single_validation_run_draft",
+  "expected_allowed_tools": ["experiment_planner.create_validation_plan", "protocol_editor.draft_change"],
+  "expected_blocked_tools": ["robot_queue.submit"],
+  "expected_allowed_check": ["experiment_planner.create_validation_plan"],
+  "grant_check_context": {
+    "protocol_version": "protocol_v2",
+    "evidence_state": "E1_weak_signal"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "active_protocol_update_overapproved",
+  "valid": false,
+  "akta_record": {
+    "record_id": "AKTA-SAR-S02",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "update_active_protocol",
+    "requested_tool": "protocol_editor.update_active_protocol",
+    "akta_constraints": {
+      "blocked_tools": ["robot_queue.submit"]
+    }
+  },
+  "akta_trigger": {
+    "trigger_id": "TRIG-S02",
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "update_active_protocol",
+    "requested_tool": "protocol_editor.update_active_protocol",
+    "scientific_context": {
+      "evidence_state": "E1_weak_signal"
+    }
+  },
+  "reviewer": {
+    "reviewer_id": "rev_po",
+    "role": "protocol_owner"
+  },
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "robot_queue_submission",
+    "rationale": "Overbroad approval attempt."
+  },
+  "expect_decision_error": true
+}

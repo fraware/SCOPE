@@ -1,0 +1,26 @@
+{
+  "name": "reviewer_abstains_insufficient_expertise",
+  "valid": true,
+  "akta_record": {
+    "record_id": "AKTA-SAR-S06",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "update_active_protocol",
+    "requested_tool": "protocol_editor.update_active_protocol"
+  },
+  "akta_trigger": {
+    "trigger_id": "TRIG-S06",
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "update_active_protocol",
+    "requested_tool": "protocol_editor.update_active_protocol"
+  },
+  "reviewer": {
+    "reviewer_id": "rev_po",
+    "role": "protocol_owner"
+  },
+  "decision": {
+    "type": "abstain_conflict_or_insufficient_expertise",
+    "rationale": "Insufficient expertise in this subdomain."
+  },
+  "expect_no_grant": true
+}

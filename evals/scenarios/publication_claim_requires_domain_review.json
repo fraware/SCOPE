@@ -1,0 +1,27 @@
+{
+  "name": "publication_claim_requires_domain_review",
+  "valid": false,
+  "akta_record": {
+    "record_id": "AKTA-SAR-S07",
+    "scientific_action_type": "A10_publication_or_claim_escalation",
+    "requested_action": "draft_publication_claim",
+    "requested_tool": "publication.draft_claim"
+  },
+  "akta_trigger": {
+    "trigger_id": "TRIG-S07",
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A10_publication_or_claim_escalation",
+    "requested_action": "draft_publication_claim",
+    "requested_tool": "publication.draft_claim"
+  },
+  "reviewer": {
+    "reviewer_id": "rev_pub",
+    "role": "publication_reviewer"
+  },
+  "decision": {
+    "type": "approve",
+    "approved_scope": "publication_claim",
+    "rationale": "Publication reviewer alone without domain co-review."
+  },
+  "expect_decision_error": true
+}

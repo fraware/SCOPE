@@ -1,0 +1,37 @@
+{
+  "name": "robot_submission_scope_violation",
+  "valid": true,
+  "akta_record": {
+    "record_id": "AKTA-SAR-S08",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "update_active_protocol",
+    "requested_tool": "protocol_editor.update_active_protocol",
+    "akta_constraints": {
+      "blocked_tools": ["robot_queue.submit"]
+    }
+  },
+  "akta_trigger": {
+    "trigger_id": "TRIG-S08",
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "update_active_protocol",
+    "requested_tool": "protocol_editor.update_active_protocol",
+    "scientific_context": {
+      "protocol_version": "protocol_v1"
+    }
+  },
+  "reviewer": {
+    "reviewer_id": "rev_po",
+    "role": "protocol_owner"
+  },
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "protocol_draft",
+    "rationale": "Draft only; robot submission remains blocked."
+  },
+  "expected_scope": "protocol_draft",
+  "expected_blocked_tools": ["robot_queue.submit"],
+  "grant_check_context": {
+    "protocol_version": "protocol_v1"
+  }
+}

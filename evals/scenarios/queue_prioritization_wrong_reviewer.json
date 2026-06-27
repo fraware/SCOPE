@@ -1,0 +1,27 @@
+{
+  "name": "queue_prioritization_wrong_reviewer",
+  "valid": false,
+  "akta_record": {
+    "record_id": "AKTA-SAR-S04",
+    "scientific_action_type": "A7_resource_or_queue_prioritization",
+    "requested_action": "prioritize_run",
+    "requested_tool": "lab_scheduler.prioritize"
+  },
+  "akta_trigger": {
+    "trigger_id": "TRIG-S04",
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A7_resource_or_queue_prioritization",
+    "requested_action": "prioritize_run",
+    "requested_tool": "lab_scheduler.prioritize"
+  },
+  "reviewer": {
+    "reviewer_id": "rev_po",
+    "role": "protocol_owner"
+  },
+  "decision": {
+    "type": "approve",
+    "approved_scope": "single_run_queue_priority",
+    "rationale": "Wrong reviewer role."
+  },
+  "expect_decision_error": true
+}
