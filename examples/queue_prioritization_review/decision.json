@@ -1,0 +1,5 @@
+{
+  "type": "approve",
+  "approved_scope": "single_run_queue_priority",
+  "rationale": "Attempted approval by wrong reviewer role."
+}

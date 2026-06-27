@@ -1,0 +1,12 @@
+{
+  "trigger_id": "TRIG-S04",
+  "akta_record_id": "AKTA-SAR-S04",
+  "requested_action": "prioritize_run",
+  "requested_tool": "lab_scheduler.prioritize",
+  "scientific_action_type": "A7_resource_or_queue_prioritization",
+  "akta_admissibility": "review_required",
+  "scientific_context": {
+    "domain": "materials",
+    "protocol_version": "protocol_v3"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "record_id": "AKTA-SAR-S04",
+  "decision_id": "AKTA-DEC-S04",
+  "requested_action": "prioritize_run",
+  "requested_tool": "lab_scheduler.prioritize",
+  "scientific_action_type": "A7_resource_or_queue_prioritization",
+  "responsibility_level": "R6_resource_allocation",
+  "decision": {
+    "admissibility": "review_required"
+  },
+  "akta_constraints": {
+    "blocked_tools": ["robot_queue.submit"]
+  }
+}
