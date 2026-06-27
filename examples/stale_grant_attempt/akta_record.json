@@ -1,0 +1,14 @@
+{
+  "record_id": "AKTA-SAR-S05",
+  "decision_id": "AKTA-DEC-S05",
+  "requested_action": "update_active_protocol",
+  "requested_tool": "protocol_editor.update_active_protocol",
+  "scientific_action_type": "A5_protocol_modification",
+  "responsibility_level": "R4_methodological_modification",
+  "decision": {
+    "admissibility": "review_required"
+  },
+  "akta_constraints": {
+    "blocked_tools": ["robot_queue.submit"]
+  }
+}
