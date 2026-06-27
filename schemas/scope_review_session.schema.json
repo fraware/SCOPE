@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/scope_review_session.schema.json",
+  "title": "SCOPE Review Session",
+  "type": "object",
+  "required": [
+    "session_id",
+    "session_version",
+    "packet_id",
+    "scientific_action_type",
+    "quorum_policy",
+    "required_roles",
+    "votes",
+    "created_at",
+    "status"
+  ],
+  "properties": {
+    "session_id": { "type": "string" },
+    "session_version": { "type": "string" },
+    "packet_id": { "type": "string" },
+    "scientific_action_type": { "type": "string" },
+    "quorum_policy": { "$ref": "scope_quorum_policy.schema.json" },
+    "required_roles": { "type": "array", "items": { "type": "string" } },
+    "votes": {
+      "type": "array",
+      "items": { "$ref": "scope_reviewer_vote.schema.json" }
+    },
+    "created_at": { "type": "string" },
+    "status": { "type": "string" }
+  },
+  "additionalProperties": true
+}
