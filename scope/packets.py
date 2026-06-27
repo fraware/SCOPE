@@ -10,9 +10,11 @@ from typing import Any, cast
 
 import jsonschema
 
+from adapters.akta.field_extraction import merge_akta_inputs
 from scope.errors import SchemaValidationError
 from scope.hash import attach_hash
 from scope.policy import PolicyStore
+from scope.scopes import resolve_requested_scope_from_tool, validate_scope
 
 
 def _utc_now() -> str:
@@ -23,12 +25,32 @@ def _new_packet_id() -> str:
     return f"SCOPE-PKT-{uuid.uuid4().hex[:6].upper()}"
 
 
-def _load_json(path_or_data: str | Path | dict[str, Any]) -> dict[str, Any]:
+def _load_json(path_or_data: str | Path | dict[str, Any] | None) -> dict[str, Any]:
+    if path_or_data is None:
+        return {}
     if isinstance(path_or_data, dict):
         return path_or_data
     path = Path(path_or_data)
     with path.open(encoding="utf-8") as fh:
         return cast(dict[str, Any], json.load(fh))
+
+
+def _resolve_requested_scope(
+    merged: dict[str, Any],
+    policy: PolicyStore,
+) -> tuple[str | None, str]:
+    """Return (requested_scope, scope_inference_source)."""
+    explicit = merged.get("requested_scope")
+    if explicit:
+        validate_scope(explicit, policy)
+        return explicit, "akta_trigger"
+
+    tool = merged.get("requested_tool")
+    inferred = resolve_requested_scope_from_tool(tool, policy) if tool else None
+    if inferred:
+        return inferred, "tool_registry"
+
+    return None, "unknown"
 
 
 class PacketBuilder:
@@ -38,24 +60,23 @@ class PacketBuilder:
 
     def create_from_akta(
         self,
-        akta_record: str | Path | dict[str, Any],
-        akta_trigger: str | Path | dict[str, Any],
+        akta_record: str | Path | dict[str, Any] | None = None,
+        akta_trigger: str | Path | dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         record = _load_json(akta_record)
         trigger = _load_json(akta_trigger)
 
-        action_type = trigger.get("scientific_action_type") or record.get("scientific_action_type")
-        if not action_type:
-            raise SchemaValidationError("Missing scientific_action_type in AKTA inputs")
+        if not record and not trigger:
+            raise SchemaValidationError("At least one of akta_record or akta_trigger is required")
 
+        merged = merge_akta_inputs(record, trigger)
+        action_type = merged["scientific_action_type"]
         required_roles = self.policy.get_required_roles(action_type)
-        admissibility = trigger.get("akta_admissibility") or record.get("decision", {}).get(
-            "admissibility", "review_required"
-        )
+        admissibility = merged.get("akta_admissibility") or "review_required"
 
-        record_id = record.get("record_id") or trigger.get("akta_record_id") or "AKTA-UNKNOWN"
-        decision_id = trigger.get("akta_decision_id") or record.get("decision_id")
-        trigger_id = trigger.get("trigger_id") or trigger.get("review_trigger_id")
+        record_id = merged.get("record_id") or "AKTA-UNKNOWN"
+        decision_id = merged.get("decision_id")
+        trigger_id = merged.get("trigger_id")
 
         source: dict[str, Any] = {"akta_record_id": record_id}
         if decision_id:
@@ -63,45 +84,57 @@ class PacketBuilder:
         if trigger_id:
             source["review_trigger_id"] = trigger_id
 
+        requested_scope, scope_inference_source = _resolve_requested_scope(merged, self.policy)
+
         review_request: dict[str, Any] = {
-            "requested_action": trigger.get("requested_action", record.get("requested_action")),
-            "requested_tool": trigger.get("requested_tool", record.get("requested_tool")),
+            "requested_action": merged["requested_action"],
+            "requested_tool": merged["requested_tool"],
             "scientific_action_type": action_type,
             "akta_admissibility": admissibility,
             "required_review_roles": required_roles,
+            "scope_inference_source": scope_inference_source,
         }
-        responsibility = trigger.get("responsibility_level") or record.get("responsibility_level")
+        if requested_scope:
+            review_request["requested_scope"] = requested_scope
+        responsibility = merged.get("responsibility_level")
         if responsibility:
             review_request["responsibility_level"] = responsibility
 
+        scientific_context: dict[str, Any]
+        if merged.get("scientific_context"):
+            scientific_context = dict(merged["scientific_context"])
+        else:
+            scientific_context = {
+                "domain": merged.get("domain", "unknown"),
+                "deployment_profile": merged.get("deployment_profile"),
+                "domain_overlay": merged.get("domain_overlay"),
+                "evidence_state": merged.get("evidence_state", "E0_unknown"),
+                "validation_status": merged.get("validation_status", "V0_unknown"),
+                "verification_status": merged.get("verification_status", "Q0_unchecked"),
+            }
+        for field, key in (
+            ("evidence_state", "evidence_state"),
+            ("validation_status", "validation_status"),
+            ("verification_status", "verification_status"),
+        ):
+            unknown_defaults = (None, "E0_unknown", "V0_unknown", "Q0_unchecked")
+            if merged.get(key) and scientific_context.get(field) in unknown_defaults:
+                scientific_context[field] = merged[key]
+
+        akta_constraints = {
+            "blocked_tools": merged.get("blocked_tools") or [],
+            "allowed_next_steps": merged.get("allowed_next_steps") or [],
+        }
+
         packet: dict[str, Any] = {
             "packet_id": _new_packet_id(),
-            "packet_version": "0.1",
+            "packet_version": "0.2",
             "created_at": _utc_now(),
             "source": source,
             "review_request": review_request,
-            "scientific_context": trigger.get(
-                "scientific_context",
-                record.get(
-                    "scientific_context",
-                    {
-                        "domain": record.get("domain", "unknown"),
-                        "deployment_profile": record.get("deployment_profile"),
-                        "domain_overlay": record.get("domain_overlay"),
-                        "evidence_state": record.get("evidence_state", "E0_unknown"),
-                        "validation_status": record.get("validation_status", "V0_unknown"),
-                        "verification_status": record.get("verification_status", "Q0_unchecked"),
-                    },
-                ),
-            ),
-            "review_artifacts": trigger.get("review_artifacts", record.get("review_artifacts", {})),
-            "akta_constraints": trigger.get(
-                "akta_constraints",
-                record.get(
-                    "akta_constraints",
-                    {"blocked_tools": [], "allowed_next_steps": []},
-                ),
-            ),
+            "scientific_context": scientific_context,
+            "review_artifacts": merged.get("review_artifacts") or {},
+            "akta_constraints": akta_constraints,
             "decision_options": self.policy.allowed_decisions(action_type),
         }
         packet = attach_hash(packet, "packet_hash")
