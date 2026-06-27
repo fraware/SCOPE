@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/akta_review_trigger_import.schema.json",
+  "title": "AKTA Review Trigger Import",
+  "type": "object",
+  "properties": {
+    "trigger_id": { "type": "string" },
+    "review_trigger_id": { "type": "string" },
+    "akta_record_id": { "type": "string" },
+    "akta_decision_id": { "type": "string" },
+    "requested_action": { "type": "string" },
+    "requested_tool": { "type": "string" },
+    "scientific_action_type": { "type": "string" },
+    "responsibility_level": { "type": "string" },
+    "akta_admissibility": { "type": "string", "enum": ["review_required", "authorization_required"] },
+    "review_scope": { "type": "string" },
+    "requested_scope": { "type": "string" },
+    "scientific_context": { "type": "object" },
+    "review_artifacts": { "type": "object" },
+    "akta_constraints": { "type": "object" }
+  },
+  "additionalProperties": true
+}
