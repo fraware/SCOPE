@@ -1,0 +1,27 @@
+{
+  "obligation_version": "pf-core-v0.1",
+  "grant_id": "SCOPE-GRANT-EXAMPLE",
+  "grant_hash": "sha256:example",
+  "permitted_tools": ["protocol_editor.draft_change"],
+  "blocked_tools": [
+    "protocol_editor.update_active_protocol",
+    "lab_scheduler.prioritize",
+    "robot_queue.submit"
+  ],
+  "approved_scope": "protocol_draft",
+  "max_responsibility_level": "R4_methodological_modification",
+  "constraints": {
+    "single_use": false,
+    "protocol_version": "protocol_v3",
+    "requires_pf_core_trace": true
+  },
+  "expiration": {
+    "expires_after": [
+      "protocol_version_change",
+      "evidence_state_change",
+      "policy_version_change"
+    ],
+    "absolute_expiration": null
+  },
+  "verification_mode": "enforce_at_runtime"
+}
