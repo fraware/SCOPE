@@ -1,0 +1,21 @@
+{
+  "manifest_version": "pcs-v0.4",
+  "artifacts": [
+    "scope_packet.json",
+    "scope_decision.json",
+    "scope_grant.json",
+    "pf_obligation.json"
+  ],
+  "hashes": {
+    "scope_packet.json": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+    "scope_decision.json": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+    "scope_grant.json": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+    "pf_obligation.json": "sha256:0000000000000000000000000000000000000000000000000000000000000004"
+  },
+  "source": {
+    "akta_record_id": "AKTA-CONTRACT",
+    "packet_id": "SCOPE-PKT-CONTRACT",
+    "decision_id": "SCOPE-DEC-CONTRACT",
+    "grant_id": "SCOPE-GRANT-CONTRACT"
+  }
+}
