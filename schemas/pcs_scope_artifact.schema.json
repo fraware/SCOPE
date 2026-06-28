@@ -5,17 +5,35 @@
   "type": "object",
   "required": ["manifest_version", "artifacts", "hashes", "source"],
   "properties": {
-    "manifest_version": { "type": "string" },
-    "artifacts": { "type": "array", "items": { "type": "string" } },
+    "manifest_version": { "type": "string", "pattern": "^pcs-v0\\.4$" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "type": "string" },
+      "contains": { "enum": ["scope_packet.json", "scope_decision.json", "scope_grant.json", "pf_obligation.json"] }
+    },
     "hashes": {
       "type": "object",
+      "minProperties": 4,
       "additionalProperties": { "type": "string", "pattern": "^sha256:" }
     },
-    "source": { "type": "object" },
+    "source": {
+      "type": "object",
+      "required": ["akta_record_id", "packet_id", "decision_id", "grant_id"],
+      "properties": {
+        "akta_record_id": { "type": "string" },
+        "packet_id": { "type": "string" },
+        "decision_id": { "type": "string" },
+        "grant_id": { "type": "string" }
+      }
+    },
     "ledger_excerpt": { "type": "array" },
     "quality_warnings": { "type": "array" },
     "decision_signature": { "type": "string" },
-    "grant_signature": { "type": "string" }
+    "grant_signature": { "type": "string" },
+    "reviewer_public_key_ref": { "type": "string", "pattern": "^sha256:" },
+    "signature_algorithm": { "type": "string" },
+    "signed_payload_hash": { "type": "string", "pattern": "^sha256:" }
   },
   "additionalProperties": true
 }
