@@ -1,0 +1,24 @@
+{
+  "name": "fail_closed_blocks_grant_ledger",
+  "akta_record": {
+    "record_id": "AKTA-EVAL-FAILCLOSED",
+    "scientific_action_type": "A5_protocol_modification"
+  },
+  "akta_trigger": {
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "draft_protocol",
+    "requested_tool": "protocol_editor.draft_change",
+    "requested_scope": "protocol_draft"
+  },
+  "reviewer": {"reviewer_id": "po1", "role": "protocol_owner"},
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "protocol_draft",
+    "rationale": "Grant must fail when remote ledger unavailable in fail_closed mode"
+  },
+  "ledger_delivery_mode": "fail_closed",
+  "ledger_remote_url": "http://127.0.0.1:1/unreachable",
+  "defer_ledger_env_until_grant": true,
+  "expect_grant_error": true
+}
