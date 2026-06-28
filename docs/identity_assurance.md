@@ -45,3 +45,9 @@ SCOPE v0.7 records identity assurance levels on every decision and grant provena
 - `SCOPE_OIDC_JWKS_URL`, `SCOPE_OIDC_ISSUER`, `SCOPE_OIDC_AUDIENCE`, `SCOPE_OIDC_PUBLIC_KEY_PEM`
 
 Schema: `schemas/identity_assurance.schema.json`
+
+## Related documentation
+
+- [rbac_scope_authority.md](rbac_scope_authority.md) — two-stage authority and `authority_checks`
+- [trusted_boundary.md](trusted_boundary.md) — OIDC configuration and trust assumptions
+- [akta_review_contract.md](akta_review_contract.md) — IAL recorded in `summary.json`
