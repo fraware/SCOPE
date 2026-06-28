@@ -64,15 +64,28 @@ SCOPE measures whether review is meaningful through ledger-backed analytics.
 | `residual_block_violation` | Approval may not preserve AKTA blocks |
 | `stale_grant_attempt` | Grant used after expiration |
 | `scope_violation_attempt` | Tool outside grant scope |
+| `ledger_delivery_failure` | Remote ledger delivery failed (v0.7) |
 
-## Review queue (v0.5)
+## Review queue (v0.7)
 
 | Metric | Description |
 |--------|-------------|
-| `open_queue_count` | Queue entries in `open` or `assigned` status (file-backed `.scope/queues/`) |
-| `overdue_queue_count` | Open/assigned entries past `due_at` SLA timestamp |
+| `open_queue_count` | Queue entries in open statuses: `open`, `assigned`, `in_review`, `needs_information`, `escalated` |
+| `overdue_queue_count` | Open-status entries past `due_at` SLA timestamp |
+| `ledger_delivery_failure_count` | Failed remote ledger deliveries recorded on the engine |
 
-Queue status lifecycle: `open` → `assigned` → `decided` → `granted` (or `closed`).
+Ten-state lifecycle (explicit transitions only):
+
+```
+open → assigned → in_review → decided → granted → closed
+         ↓           ↓
+   needs_information  escalated
+         ↓           ↓
+       expired (reopen → open)
+       cancelled / closed (terminal without grant)
+```
+
+Grants require `decided → granted`. Direct grant from `open`, `assigned`, `in_review`, `needs_information`, or `escalated` is forbidden.
 
 ## Generate report
 
@@ -81,8 +94,7 @@ scope quality report --ledger logs/scope_events.jsonl --out report.json \
   --queue-dir .scope/queues
 ```
 
-All metrics in `policy/quality_metrics.yaml` are implemented in v0.5 (`v0_4_status: implemented` for core metrics; `v0_5_status: implemented` for queue metrics).
-Thresholds are configured in the same file.
+All metrics in `policy/quality_metrics.yaml` are implemented in v0.7. Thresholds are configured in the same file.
 
 ## Ledger events
 
