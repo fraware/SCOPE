@@ -1,0 +1,42 @@
+{
+  "confidence": {
+    "requires_second_review": false,
+    "reviewer_confidence": 0.5
+  },
+  "decided_at": "2026-06-28T07:18:09Z",
+  "decision": {
+    "approved_scope": "protocol_draft",
+    "rationale": "Protocol drift scenario: draft only until validation completes.",
+    "rejected_scope": [
+      "protocol_diff_review",
+      "single_validation_plan",
+      "single_validation_run_draft",
+      "active_protocol_update",
+      "single_run_queue_priority",
+      "bounded_batch_priority",
+      "tool_permission_escalation",
+      "execution_payload_preparation",
+      "robot_queue_submission",
+      "publication_claim",
+      "scientific_memory_import"
+    ],
+    "type": "approve_narrower_scope"
+  },
+  "decision_hash": "sha256:90aa8ffc346a034c20f453b259e80ff2cc27a97ae20df09eaa24eb9128dc8e78",
+  "decision_id": "SCOPE-DEC-F0F177",
+  "expiration": {
+    "expires_on": [
+      "protocol_version_change",
+      "evidence_state_change",
+      "policy_version_change"
+    ],
+    "mode": "event_based"
+  },
+  "packet_id": "SCOPE-PKT-4DDEDC",
+  "reviewer": {
+    "conflict_declared": false,
+    "declared_expertise": [],
+    "reviewer_id": "reviewer_protocol_owner_drift",
+    "role": "protocol_owner"
+  }
+}
