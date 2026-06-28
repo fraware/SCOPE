@@ -4,25 +4,32 @@ SCOPE v0.7 records identity assurance levels on every decision and grant provena
 
 ## Levels
 
-| Level | Meaning |
-|-------|---------|
-| IAL0 | Caller-supplied reviewer JSON only; not institutional authority |
-| IAL1 | Valid local signature on decision; no OIDC verification |
-| IAL2 | OIDC-verified identity without matching institutional directory role |
-| IAL3 | OIDC plus institutional directory role from `org_rbac.yaml` |
-| IAL4 | OIDC plus active delegation record with `delegation_id` |
+| Level | Alias | Meaning |
+|-------|-------|---------|
+| IAL0 | `caller_supplied` | Caller-supplied reviewer JSON only; not institutional authority |
+| IAL1 | `local_signed_key` | Valid local signature on decision; no OIDC verification |
+| IAL2 | `oidc_verified` | OIDC-verified identity without matching institutional directory role |
+| IAL3 | `oidc_plus_rbac_role` | OIDC plus institutional directory role from `org_rbac.yaml` |
+| IAL4 | `oidc_plus_rbac_plus_delegation` | OIDC plus active delegation record with `delegation_id` |
 
 ## Provenance fields
 
 ```json
 {
   "identity_assurance_level": "IAL2",
-  "role_resolution_source": "org_rbac",
+  "identity_source": "oidc_jwt",
+  "role_resolution_source": "oidc_verified",
   "delegation_id": "ds1->ds2",
-  "identity_provider": "https://idp.example.com",
   "identity_claim_hash": "sha256:..."
 }
 ```
+
+`role_resolution_source` values:
+
+- `caller_supplied` — IAL0 caller JSON only
+- `local_signed_key` — IAL1 signed decision without OIDC
+- `oidc_verified` — IAL2 OIDC identity without org RBAC role match
+- `org_rbac` — IAL3/IAL4 institutional role resolved from `org_rbac.yaml`
 
 ## Rules
 
