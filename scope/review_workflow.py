@@ -34,7 +34,7 @@ ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
         {"needs_information", "decided", "escalated", "cancelled", "closed", "expired"}
     ),
     "needs_information": frozenset(
-        {"in_review", "decided", "escalated", "cancelled", "closed", "expired"}
+        {"in_review", "escalated", "cancelled", "closed", "expired"}
     ),
     "escalated": frozenset(
         {"in_review", "assigned", "cancelled", "closed", "expired"}
