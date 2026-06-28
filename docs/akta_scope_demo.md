@@ -1,6 +1,6 @@
 # AKTA to SCOPE to PF to PCS Demo
 
-This document walks through the full authorization chain using SCOPE v0.2.
+This document walks through the full authorization chain using SCOPE v0.4.
 
 ## Prerequisites
 
@@ -30,7 +30,8 @@ scope packet create `
 
 The packet includes:
 
-- `review_request.requested_scope` from AKTA trigger
+- `review_request.requested_scope` from AKTA trigger (valid approval scope names only)
+- `review_request.review_route` from AKTA `review_scope` (may be a non-scope route label)
 - `review_request.scope_inference_source` (`akta_trigger`, `tool_registry`, or `unknown`)
 - Required reviewer roles from policy matrix
 - AKTA constraints (blocked tools, allowed next steps)
@@ -53,16 +54,19 @@ scope decision submit `
 
 SCOPE rejects overbroad approvals against explicit `requested_scope`.
 
-For multi-reviewer actions (e.g. A6), use review sessions:
+For multi-reviewer actions (e.g. A6), use review sessions with persistent storage:
 
 ```powershell
-scope review session create --packet /tmp/scope_packet.json --out /tmp/session.json
+scope review session create --packet /tmp/scope_packet.json --out /tmp/session.json `
+  --session-store json --session-dir /tmp/sessions
 
 scope review session vote --session /tmp/session.json --packet /tmp/scope_packet.json `
   --reviewer examples/protocol_drift/reviewer_protocol_owner.json `
-  --decision examples/protocol_drift/decision.json --out /tmp/decision_po.json
+  --decision examples/protocol_drift/decision.json --out /tmp/decision_po.json `
+  --session-store json --session-dir /tmp/sessions
 
-scope review session status --session /tmp/session.json --packet /tmp/scope_packet.json
+scope review session status --session-id SCOPE-SESS-XXXXXX --packet /tmp/scope_packet.json `
+  --session-store json --session-dir /tmp/sessions
 ```
 
 Quorum modes (`require_all`, `require_any`, `n_of_m`, `statistical_co_review`) and
@@ -71,7 +75,7 @@ Quorum modes (`require_all`, `require_any`, `n_of_m`, `statistical_co_review`) a
 ## Step 4: Issue grant
 
 Production mode (`$env:SCOPE_PRODUCTION_MODE = "true"`) requires a signed **decision**
-before grant issue. Grant signing is optional for downstream verification.
+before grant issue. Submit unsigned, sign, then issue:
 
 ```powershell
 scope grant issue `
@@ -80,13 +84,15 @@ scope grant issue `
   --out /tmp/scope_grant.json
 ```
 
-Optional signing (decision required in production mode; grant signing optional):
+Signing workflow (decision required in production mode; grant signing optional):
 
 ```powershell
+scope decision submit ... --out /tmp/scope_decision.json
 scope decision sign --decision /tmp/scope_decision.json --key keys/reviewer.pem --out /tmp/signed_decision.json
+scope decision validate --require-signature /tmp/signed_decision.json
 scope grant issue --packet /tmp/scope_packet.json --decision /tmp/signed_decision.json --out /tmp/scope_grant.json
 scope grant sign --grant /tmp/scope_grant.json --key keys/reviewer.pem --out /tmp/signed_grant.json
-scope verify --artifact /tmp/signed_decision.json --key keys/reviewer.pem --type decision
+scope verify --artifact /tmp/signed_decision.json --public-key keys/reviewer.pub --type decision
 ```
 
 ## Step 5: Runtime enforcement
