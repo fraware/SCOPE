@@ -1,4 +1,4 @@
-version: scope-overlay-v0.4
+version: scope-overlay-v0.5
 overlay_id: genomics_research
 description: Genomics research overlay requiring biosecurity co-review on tool mutations.
 matrix_overrides:
