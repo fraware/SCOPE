@@ -1,4 +1,4 @@
-version: scope-core-v0.2
+version: scope-core-v0.4
 roles:
   domain_scientist:
     description: Reviews scientific plausibility, domain assumptions, and interpretation.
@@ -67,13 +67,25 @@ roles:
     can_approve_scopes:
       - clarification_only
   biosecurity_reviewer:
-    description: Placeholder for domain-sensitive biological risk review.
+    description: |
+      Reviews dual-use, pathogen, and synthetic biology risk for consequential actions.
+      Institutions configure overlay policies for mandatory biosecurity participation.
     can_approve_scopes:
       - clarification_only
+      - hypothesis_discussion
+      - evidence_interpretation_only
+      - protocol_draft
+      - protocol_diff_review
+      - tool_permission_escalation
   clinical_reviewer:
-    description: Placeholder for patient-facing or clinically relevant claims.
+    description: |
+      Reviews patient-facing claims, diagnostic assertions, and clinical translation risk.
+      Required by institutional policy for clinically tagged domains and overlays.
     can_approve_scopes:
       - clarification_only
+      - evidence_interpretation_only
+      - draft_recommendation
+      - publication_claim
   ethics_reviewer:
     description: Reviews human-subject, dual-use, or institutional ethics concerns.
     can_approve_scopes:
