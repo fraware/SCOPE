@@ -58,19 +58,32 @@ def packet_group() -> None:
 @click.option("--akta-record", required=False, type=click.Path(exists=True), default=None)
 @click.option("--akta-trigger", required=False, type=click.Path(exists=True), default=None)
 @click.option("--vsa-report", required=False, type=click.Path(exists=True), default=None)
+@click.option(
+    "--vsa-url",
+    required=False,
+    default=None,
+    help="Fetch VSA report from URL (or use VSA_API_URL + report id in path).",
+)
 @click.option("--out", required=True, type=click.Path())
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
 def packet_create(
     akta_record: str | None,
     akta_trigger: str | None,
     vsa_report: str | None,
+    vsa_url: str | None,
     out: str,
     policy: str,
 ) -> None:
     if not akta_record and not akta_trigger:
         raise click.UsageError("At least one of --akta-record or --akta-trigger is required")
     engine = _engine(policy, None)
-    vsa = _load_json(vsa_report) if vsa_report else None
+    vsa = None
+    if vsa_url:
+        from adapters.vsa.fetch_report import fetch_vsa_report_from_file_or_url
+
+        vsa = fetch_vsa_report_from_file_or_url(vsa_url)
+    elif vsa_report:
+        vsa = _load_json(vsa_report)
     pkt = engine.create_packet(akta_record, akta_trigger, vsa_report=vsa)
     _write_json(out, pkt)
     click.echo(f"Created packet {pkt['packet_id']} -> {out}")
@@ -121,14 +134,29 @@ def decision_group() -> None:
     default=False,
     help="Mark decision as draft (signature required before grant in production mode).",
 )
+@click.option("--identity-token", default=None, help="OIDC JWT bearer token for reviewer identity.")
+@click.option("--enforce-rbac", is_flag=True, default=False, help="Enforce org RBAC on submit.")
 def decision_submit(
-    packet: str, reviewer: str, decision: str, out: str, policy: str, draft: bool
+    packet: str,
+    reviewer: str,
+    decision: str,
+    out: str,
+    policy: str,
+    draft: bool,
+    identity_token: str | None,
+    enforce_rbac: bool,
 ) -> None:
     engine = _engine(policy, None)
     decision_data = _load_json(decision)
     if draft:
         decision_data["draft"] = True
-    result = engine.submit_decision(_load_json(packet), reviewer, decision_data)
+    result = engine.submit_decision(
+        _load_json(packet),
+        reviewer,
+        decision_data,
+        identity_token=identity_token,
+        enforce_rbac=enforce_rbac or None,
+    )
     _write_json(out, result)
     click.echo(f"Submitted decision {result['decision_id']} -> {out}")
     if result.get("signature_required"):
@@ -148,14 +176,42 @@ def decision_validate(decision_path: str, require_signature: bool, policy: str) 
 
 @decision_group.command("sign")
 @click.option("--decision", required=True, type=click.Path(exists=True))
-@click.option("--key", required=True, type=click.Path(exists=True))
+@click.option("--key", required=False, type=click.Path(exists=True), default=None)
+@click.option(
+    "--signing-provider",
+    type=click.Choice(["local", "env", "registry"]),
+    default=None,
+    help="Signing key provider (alternative to --key).",
+)
+@click.option("--reviewer-id", default=None, help="Required for registry signing provider.")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
 @click.option("--out", required=True, type=click.Path())
-def decision_sign(decision: str, key: str, out: str) -> None:
-    from scope.signing import Ed25519Signer
+def decision_sign(
+    decision: str,
+    key: str | None,
+    signing_provider: str | None,
+    reviewer_id: str | None,
+    policy: str,
+    out: str,
+) -> None:
+    from scope.signing_providers import resolve_signing_provider
 
     dec = _load_json(decision)
-    signer = Ed25519Signer(key)
-    signed = ScopeEngine.from_policy_dir("policy/").sign_decision(dec, signer)
+    if signing_provider:
+        provider = resolve_signing_provider(
+            signing_provider,
+            policy_dir=policy,
+            key_path=key,
+            reviewer_id=reviewer_id,
+        )
+        signer = provider.get_signer(reviewer_id=reviewer_id)
+    elif key:
+        from scope.signing import Ed25519Signer
+
+        signer = Ed25519Signer(key)
+    else:
+        raise click.UsageError("Provide --key or --signing-provider")
+    signed = ScopeEngine.from_policy_dir(policy).sign_decision(dec, signer)
     _write_json(out, signed)
     click.echo(f"Signed decision -> {out}")
 
@@ -268,6 +324,80 @@ def verify_cmd(
     sys.exit(1)
 
 
+@main.group("akta")
+def akta_group() -> None:
+    """AKTA integration helpers."""
+
+
+@akta_group.command("review")
+@click.option("--akta-trigger", required=True, type=click.Path(exists=True))
+@click.option("--akta-record", required=True, type=click.Path(exists=True))
+@click.option("--grant-scope", required=True, help="Approval scope to grant.")
+@click.option("--reviewer", required=True, type=click.Path(exists=True))
+@click.option("--decision-rationale", required=True, help="Reviewer rationale for the decision.")
+@click.option("--out-dir", required=True, type=click.Path())
+@click.option(
+    "--signing-key",
+    type=click.Path(exists=True),
+    default=None,
+    help="Ed25519 private key PEM; required in production mode before grant issue.",
+)
+@click.option(
+    "--signing-provider",
+    type=click.Choice(["local", "env", "registry"]),
+    default=None,
+)
+@click.option("--reviewer-id", default=None, help="Required for registry signing provider.")
+@click.option("--queue-dir", type=click.Path(), default=None, help="Auto-create queue entry.")
+@click.option("--identity-token", default=None)
+@click.option(
+    "--session",
+    is_flag=True,
+    default=False,
+    help="Create review session when multi-role review is required.",
+)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+@click.option("--ledger", type=click.Path(), default=None)
+def akta_review(
+    akta_trigger: str,
+    akta_record: str,
+    grant_scope: str,
+    reviewer: str,
+    decision_rationale: str,
+    out_dir: str,
+    signing_key: str | None,
+    signing_provider: str | None,
+    reviewer_id: str | None,
+    queue_dir: str | None,
+    identity_token: str | None,
+    session: bool,
+    policy: str,
+    ledger: str | None,
+) -> None:
+    """Run AKTA review: packet, decision, grant, and summary in one step."""
+    from scope.akta_review import run_akta_review
+
+    engine = _engine(policy, ledger)
+    summary = run_akta_review(
+        engine,
+        akta_record=akta_record,
+        akta_trigger=akta_trigger,
+        grant_scope=grant_scope,
+        reviewer=reviewer,
+        decision_rationale=decision_rationale,
+        out_dir=out_dir,
+        signing_key=signing_key,
+        signing_provider=signing_provider,
+        queue_dir=queue_dir,
+        identity_token=identity_token,
+        session_mode=session,
+    )
+    click.echo(
+        f"AKTA review complete: grant {summary['grant_id']} "
+        f"({summary['approved_scope']}) -> {out_dir}"
+    )
+
+
 @main.group("export")
 def export_group() -> None:
     """Export adapters."""
@@ -357,10 +487,16 @@ def quality_group() -> None:
 @quality_group.command("report")
 @click.option("--ledger", required=True, type=click.Path(exists=True))
 @click.option("--out", required=True, type=click.Path())
+@click.option(
+    "--queue-dir",
+    type=click.Path(),
+    default=None,
+    help="Review queue directory (default: .scope/queues).",
+)
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
-def quality_report(ledger: str, out: str, policy: str) -> None:
+def quality_report(ledger: str, out: str, queue_dir: str | None, policy: str) -> None:
     engine = _engine(policy, ledger)
-    report = engine.quality_report()
+    report = engine.quality_report(queue_dir=queue_dir)
     _write_json(out, report)
     click.echo(f"Quality report -> {out}")
 
@@ -582,6 +718,16 @@ def session_status(
     click.echo(json.dumps(session.to_artifact(), indent=2))
 
 
+@session_group.command("replicate")
+@click.option("--source", required=True, type=click.Path(exists=True))
+@click.option("--dest", required=True, type=click.Path())
+def session_replicate(source: str, dest: str) -> None:
+    from scope.session_store import replicate_sessions
+
+    result = replicate_sessions(source, dest)
+    click.echo(json.dumps(result, indent=2))
+
+
 @review_group.group("queue")
 def queue_group() -> None:
     """Review queue tracking (open, assigned, overdue)."""
@@ -592,12 +738,19 @@ def queue_group() -> None:
 @click.option("--out", required=True, type=click.Path())
 @click.option("--queue-dir", type=click.Path(), default=None, help="Directory for queue artifacts.")
 @click.option("--sla-hours", default=72, show_default=True, type=int)
+@click.option(
+    "--auto-assign",
+    is_flag=True,
+    default=False,
+    help="Auto-assign first eligible reviewer from policy.",
+)
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
 def review_queue_create(
     packet: str,
     out: str,
     queue_dir: str | None,
     sla_hours: int,
+    auto_assign: bool,
     policy: str,
 ) -> None:
     engine = _engine(policy, None)
@@ -605,6 +758,7 @@ def review_queue_create(
         _load_json(packet),
         queue_dir=queue_dir,
         sla_hours=sla_hours,
+        auto_assign=auto_assign,
     )
     path = entry.save(out)
     click.echo(f"Created review queue {entry.queue_id} -> {path}")
@@ -684,6 +838,141 @@ def review_queue_status(
     click.echo(json.dumps(engine.review_queue_status(queue_dir=queue_dir), indent=2))
 
 
+@queue_group.command("escalate")
+@click.option("--queue-dir", type=click.Path(), default=None)
+@click.option("--dry-run", is_flag=True, default=False)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+@click.option("--ledger", type=click.Path(), default=None)
+def review_queue_escalate(
+    queue_dir: str | None,
+    dry_run: bool,
+    policy: str,
+    ledger: str | None,
+) -> None:
+    engine = _engine(policy, ledger)
+    results = engine.escalate_review_queues(queue_dir=queue_dir, dry_run=dry_run)
+    click.echo(json.dumps(results, indent=2))
+
+
+@queue_group.command("dashboard")
+@click.option("--out", required=True, type=click.Path())
+@click.option("--queue-dir", type=click.Path(), default=None)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def review_queue_dashboard_cmd(out: str, queue_dir: str | None, policy: str) -> None:
+    from scope.review_queue_render import write_queue_dashboard
+
+    path = write_queue_dashboard(out, queue_dir)
+    click.echo(f"Queue dashboard -> {path}")
+
+
+@main.group("ledger")
+def ledger_group() -> None:
+    """Ledger event recording."""
+
+
+@ledger_group.command("record-violation")
+@click.option("--grant-id", required=True)
+@click.option("--tool", required=True)
+@click.option("--reason", required=True)
+@click.option("--ledger", required=True, type=click.Path())
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def ledger_record_violation(
+    grant_id: str, tool: str, reason: str, ledger: str, policy: str
+) -> None:
+    engine = _engine(policy, ledger)
+    event = engine.record_runtime_violation(grant_id, tool=tool, reason=reason)
+    click.echo(json.dumps(event, indent=2))
+
+
+@ledger_group.command("record-expiration")
+@click.option("--grant-id", required=True)
+@click.option(
+    "--reason",
+    required=True,
+    type=click.Choice(
+        [
+            "protocol_version_change",
+            "evidence_downgrade",
+            "policy_version_change",
+            "reviewer_withdrawal",
+            "manual",
+        ]
+    ),
+)
+@click.option("--packet-id", default=None)
+@click.option("--ledger", required=True, type=click.Path())
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def ledger_record_expiration(
+    grant_id: str,
+    reason: str,
+    packet_id: str | None,
+    ledger: str,
+    policy: str,
+) -> None:
+    engine = _engine(policy, ledger)
+    event = engine.record_grant_expiration(grant_id, reason=reason, packet_id=packet_id)
+    click.echo(json.dumps(event, indent=2))
+
+
+@main.group("identity")
+def identity_group() -> None:
+    """Institutional identity verification."""
+
+
+@identity_group.command("verify-token")
+@click.option("--token", required=True, help="JWT bearer token.")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def identity_verify_token(token: str, policy: str) -> None:
+    import os
+
+    from scope.identity import map_claims_to_reviewer, verify_jwt_token
+
+    claims = verify_jwt_token(
+        token,
+        jwks_url=os.environ.get("SCOPE_OIDC_JWKS_URL"),
+        issuer=os.environ.get("SCOPE_OIDC_ISSUER"),
+        audience=os.environ.get("SCOPE_OIDC_AUDIENCE"),
+        public_key_pem=os.environ.get("SCOPE_OIDC_PUBLIC_KEY_PEM"),
+    )
+    identity = map_claims_to_reviewer(claims, policy_dir=policy)
+    click.echo(
+        json.dumps(
+            {
+                "reviewer_id": identity.reviewer_id,
+                "role": identity.role,
+                "claims": identity.claims,
+            },
+            indent=2,
+        )
+    )
+
+
+@main.group("policy")
+def policy_group() -> None:
+    """Policy bundle utilities."""
+
+
+@policy_group.group("overlay")
+def policy_overlay_group() -> None:
+    """Domain overlay management."""
+
+
+@policy_overlay_group.command("validate")
+@click.option("--overlay", required=True, type=click.Path(exists=True))
+def policy_overlay_validate(overlay: str) -> None:
+    from scope.overlay import validate_overlay_file
+
+    click.echo(json.dumps(validate_overlay_file(overlay), indent=2))
+
+
+@policy_overlay_group.command("list")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def policy_overlay_list(policy: str) -> None:
+    from scope.overlay import list_overlays
+
+    click.echo(json.dumps(list_overlays(policy), indent=2))
+
+
 @main.group("key")
 def key_group() -> None:
     """Reviewer public key registry workflow."""
@@ -700,12 +989,10 @@ def key_list(policy: str) -> None:
 @key_group.command("register")
 @click.option("--reviewer-id", required=True)
 @click.option("--public-key", required=True, type=click.Path(exists=True))
-@click.option("--private-key", required=False, type=click.Path(exists=True), default=None)
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
 def key_register(
     reviewer_id: str,
     public_key: str,
-    private_key: str | None,
     policy: str,
 ) -> None:
     from scope.key_registry import register_reviewer_key
@@ -714,8 +1001,17 @@ def key_register(
         policy,
         reviewer_id,
         public_key,
-        private_key_path=private_key,
     )
+    click.echo(json.dumps(result, indent=2))
+
+
+@key_group.command("migrate-registry")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def key_migrate_registry(policy: str) -> None:
+    """Remove legacy private key fields from reviewer_key_registry.yaml."""
+    from scope.key_registry import migrate_reviewer_registry
+
+    result = migrate_reviewer_registry(policy)
     click.echo(json.dumps(result, indent=2))
 
 
