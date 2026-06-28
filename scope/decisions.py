@@ -151,6 +151,7 @@ class DecisionEngine:
             "scope_policy_hash": self.policy.policy_hash,
             "reviewer_key_registry_version": self.policy.reviewer_key_registry_version,
             "reviewer_key_registry_hash": self.policy.reviewer_key_registry_hash,
+            "scope_trust_root_hash": self.policy.scope_trust_root_hash,
         }
         sig_fields = (
             "decision_signature",
