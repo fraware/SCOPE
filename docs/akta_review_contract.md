@@ -31,6 +31,8 @@ Required fields:
 }
 ```
 
+Optional fields: `status`, `packet_id`, `decision_id`, `grant_id`, `allowed_tools`, `blocked_tools`, `decision_type`, `scope_trust_root_hash`, `queue_id`.
+
 Schema: `schemas/scope_akta_review_summary.schema.json`
 
 ## Acceptance criteria
@@ -45,3 +47,9 @@ Schema: `schemas/scope_akta_review_summary.schema.json`
 ## Primary AKTA path
 
 `scope akta review` is the documented primary AKTA integration path for packet → decision → grant workflows.
+
+## Related documentation
+
+- [akta_integration.md](akta_integration.md) — integration overview
+- [akta_scope_demo.md](akta_scope_demo.md) — full cross-repo demo
+- [external_integration_contracts.md](external_integration_contracts.md) — AKTA field mappings
