@@ -1,12 +1,20 @@
 {
+  "grant_id": "SCOPE-GRANT-52BA47",
+  "grant_version": "0.5.0",
+  "created_at": "2026-06-28T13:01:54Z",
+  "source": {
+    "packet_id": "SCOPE-PKT-764195",
+    "decision_id": "SCOPE-DEC-DF32F5",
+    "akta_record_id": "AKTA-SAR-DRIFT-001"
+  },
   "authorization": {
-    "allowed_tools": [
-      "protocol_editor.draft_change"
-    ],
+    "approved_scope": "protocol_draft",
     "approved_actions": [
       "A5_protocol_modification"
     ],
-    "approved_scope": "protocol_draft",
+    "allowed_tools": [
+      "protocol_editor.draft_change"
+    ],
     "blocked_tools": [
       "lab_scheduler.prioritize",
       "protocol_editor.update_active_protocol",
@@ -15,36 +23,32 @@
     "max_responsibility_level": "R4_methodological_modification"
   },
   "constraints": {
-    "domain_overlay": null,
-    "evidence_state": "E2_preliminary_signal",
+    "single_use": false,
     "project_id": "drift_demo",
     "protocol_version": "protocol_v3",
-    "requires_pf_core_trace": true,
+    "domain_overlay": null,
+    "model_version": null,
+    "tool_registry_version": null,
+    "evidence_state": "E2_preliminary_signal",
+    "validation_status": "V1_literature_supported",
     "requires_recording": true,
-    "single_use": false,
-    "validation_status": "V1_literature_supported"
+    "requires_pf_core_trace": true
   },
-  "created_at": "2026-06-28T07:18:09Z",
   "expiration": {
-    "absolute_expiration": null,
     "expires_after": [
       "protocol_version_change",
       "evidence_state_change",
       "policy_version_change"
-    ]
+    ],
+    "absolute_expiration": null
   },
-  "grant_hash": "sha256:ad3d0c94f07fb6a1dfc36010c1fe84e7e054afc0b315d9468778b2ee2236d0fc",
-  "grant_id": "SCOPE-GRANT-1C6E12",
-  "grant_version": "0.4.0",
   "provenance": {
+    "scope_policy_version": "scope-core-v0.5",
+    "scope_policy_hash": "sha256:6d850af29c454697422054796f7eb699f0f76dc73055b79464d7f759590fc4ee",
     "akta_policy_hash": null,
-    "reviewer_role_policy_hash": "sha256:3a8b0a5ff1fad189d38940cecdc9132041814d765b70df6721ee60ce2c650a1b",
-    "scope_policy_hash": "sha256:3a8b0a5ff1fad189d38940cecdc9132041814d765b70df6721ee60ce2c650a1b",
-    "scope_policy_version": "scope-core-v0.4"
+    "reviewer_role_policy_hash": "sha256:6d850af29c454697422054796f7eb699f0f76dc73055b79464d7f759590fc4ee",
+    "reviewer_key_registry_version": "scope-core-v0.5",
+    "reviewer_key_registry_hash": "sha256:144b56c5c179ad048d50f25b076d0f5bb95d56dbd955ba6637dba2b9406f0b05"
   },
-  "source": {
-    "akta_record_id": "AKTA-SAR-DRIFT-001",
-    "decision_id": "SCOPE-DEC-F0F177",
-    "packet_id": "SCOPE-PKT-4DDEDC"
-  }
+  "grant_hash": "sha256:bf8788ee0f31ea9f639973e535e6c79fcb1ceb0eb3fa2bed30a51de8903239b0"
 }
