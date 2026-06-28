@@ -1,4 +1,4 @@
-"""Evaluation scenario runner for SCOPE v0.6."""
+"""Evaluation scenario runner for SCOPE v0.7."""
 
 from __future__ import annotations
 
@@ -116,6 +116,49 @@ def _assert_identity_provenance(
                     False,
                     f"Grant role_resolution_source {grant_source} != {expected_source}",
                 )
+
+    expected_identity_source = scenario.get("expect_identity_source")
+    if expected_identity_source:
+        actual = (decision.get("provenance") or {}).get("identity_source")
+        if actual != expected_identity_source:
+            return ScenarioResult(
+                name,
+                False,
+                f"Decision identity_source {actual} != {expected_identity_source}",
+            )
+        if grant is not None:
+            grant_source = (grant.get("provenance") or {}).get("identity_source")
+            if grant_source != expected_identity_source:
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"Grant identity_source {grant_source} != {expected_identity_source}",
+                )
+
+    if grant is not None and scenario.get("expect_authority_checks", True):
+        decision_checks = (decision.get("provenance") or {}).get("authority_checks")
+        grant_checks = (grant.get("provenance") or {}).get("authority_checks")
+        if not decision_checks:
+            return ScenarioResult(name, False, "Decision missing authority_checks provenance")
+        if not grant_checks:
+            return ScenarioResult(name, False, "Grant missing authority_checks provenance")
+        if grant_checks != decision_checks:
+            return ScenarioResult(
+                name,
+                False,
+                "Grant authority_checks != decision authority_checks",
+            )
+
+    expected_sal = scenario.get("expect_signing_assurance_level")
+    if expected_sal and grant is not None:
+        actual_sal = (grant.get("provenance") or {}).get("signing_assurance_level")
+        if actual_sal != expected_sal:
+            return ScenarioResult(
+                name,
+                False,
+                f"Grant SAL {actual_sal} != {expected_sal}",
+            )
+
     return None
 
 
@@ -182,6 +225,54 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
         _restore_ledger_env(saved_ledger_env)
 
 
+def _run_akta_review_scenario(
+    engine: ScopeEngine,
+    scenario: dict[str, Any],
+) -> ScenarioResult:
+    from scope.akta_review import run_akta_review
+    from scope.schema_util import validate_artifact
+
+    name = scenario["name"]
+    with tempfile.TemporaryDirectory() as out_dir:
+        signing_key: Path | None = None
+        if scenario.get("sign_before_grant"):
+            key = Path(out_dir) / "reviewer.pem"
+            pub = Path(out_dir) / "reviewer.pub"
+            Ed25519Signer.generate_keypair(key, pub)
+            signing_key = key
+        summary = run_akta_review(
+            engine,
+            akta_record=scenario["akta_record"],
+            akta_trigger=scenario["akta_trigger"],
+            grant_scope=scenario.get("grant_scope", scenario["decision"]["approved_scope"]),
+            reviewer=scenario["reviewer"],
+            decision_rationale=scenario["decision"]["rationale"],
+            out_dir=out_dir,
+            signing_key=signing_key,
+        )
+
+        validate_artifact(summary, "scope_akta_review_summary.schema.json")
+        expected_sal = scenario.get("expect_signing_assurance_level")
+        if expected_sal and summary.get("signing_assurance_level") != expected_sal:
+            return ScenarioResult(
+                name,
+                False,
+                f"Summary SAL {summary.get('signing_assurance_level')} != {expected_sal}",
+            )
+        expected_ial = scenario.get("expect_identity_assurance_level")
+        if expected_ial and summary.get("identity_assurance_level") != expected_ial:
+            return ScenarioResult(
+                name,
+                False,
+                f"Summary IAL {summary.get('identity_assurance_level')} != {expected_ial}",
+            )
+        for field in ("packet_path", "decision_path", "grant_path"):
+            path = Path(summary[field])
+            if not path.is_file():
+                return ScenarioResult(name, False, f"Missing artifact: {field}")
+        return ScenarioResult(name, True, "AKTA review contract OK")
+
+
 def _run_scenario_with_engine(
     engine: ScopeEngine,
     scenario: dict[str, Any],
@@ -190,6 +281,9 @@ def _run_scenario_with_engine(
 ) -> ScenarioResult:
     name = scenario["name"]
     try:
+        if scenario.get("run_akta_review"):
+            return _run_akta_review_scenario(engine, scenario)
+
         vsa_path = scenario.get("vsa_report_path")
         vsa_report = ROOT / vsa_path if vsa_path else None
         packet = engine.create_packet(
@@ -252,11 +346,14 @@ def _run_scenario_with_engine(
                     "exp": int(time.time()) + 3600,
                 },
             )
+            if scenario.get("enforce_rbac"):
+                os.environ["SCOPE_ENFORCE_RBAC"] = "true"
             decision = engine.submit_decision(
                 packet,
                 scenario["reviewer"],
                 scenario["decision"],
                 identity_token=token,
+                enforce_rbac=scenario.get("enforce_rbac"),
             )
             identity_check = _assert_identity_provenance(scenario, decision)
             if identity_check is not None:
@@ -394,8 +491,10 @@ EXTENDED_SCENARIOS = [
     "runtime_violation_outcome_metric.json",
     "biosecurity_mandatory_session.json",
     "identity_assurance_caller_ial0.json",
+    "identity_assurance_local_signed_ial1.json",
     "queue_invalid_transition.json",
     "fail_closed_grant_blocked.json",
+    "akta_review_signed_summary.json",
 ]
 
 
@@ -416,7 +515,7 @@ def main() -> int:
     parser.add_argument(
         "--extended",
         action="store_true",
-        help="Also run extended v0.5 scenarios (multi-review, signing, VSA, overlay)",
+        help="Also run extended v0.7 scenarios (IAL, SAL, queue, ledger, AKTA contract)",
     )
     args = parser.parse_args()
 
