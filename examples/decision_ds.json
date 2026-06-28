@@ -1,0 +1,6 @@
+{
+  "type": "approve_narrower_scope",
+  "approved_scope": "protocol_draft",
+  "rationale": "Co-review confirms draft-only scope is appropriate for current evidence.",
+  "reviewer_confidence": 0.75
+}
