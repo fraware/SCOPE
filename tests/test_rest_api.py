@@ -336,8 +336,8 @@ def test_quality_endpoint(client):
     resp = client.get("/v0/quality")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["report_version"] == "0.6"
-    assert body["policy_version"] == "scope-core-v0.6"
+    assert body["report_version"] == "0.7"
+    assert body["policy_version"] == "scope-core-v0.7"
     assert "metrics" in body
     assert "warnings" in body
 
