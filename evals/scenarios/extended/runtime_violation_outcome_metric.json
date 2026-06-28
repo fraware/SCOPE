@@ -1,0 +1,25 @@
+{
+  "name": "runtime_violation_outcome_metric",
+  "akta_record": {
+    "record_id": "AKTA-EVAL-VIOL",
+    "scientific_action_type": "A5_protocol_modification"
+  },
+  "akta_trigger": {
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "draft_protocol",
+    "requested_tool": "protocol_editor.draft_change",
+    "requested_scope": "protocol_draft"
+  },
+  "reviewer": {"reviewer_id": "po1", "role": "protocol_owner"},
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "protocol_draft",
+    "rationale": "Grant for violation metric test"
+  },
+  "record_runtime_violation": {
+    "tool": "robot.submit",
+    "reason": "Eval confirmed violation"
+  },
+  "expected_violation_metric_min": 1
+}
