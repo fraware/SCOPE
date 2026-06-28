@@ -54,7 +54,7 @@ Duplicate votes from the same reviewer are rejected. Votes are recorded in both 
 
 ## Policy version
 
-Active policy is tagged `scope-core-v0.6`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
+Active policy is tagged `scope-core-v0.7`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
 
 ## Identity (v0.6)
 
