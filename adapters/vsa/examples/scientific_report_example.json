@@ -1,0 +1,26 @@
+{
+  "report_id": "VSA-EXAMPLE-001",
+  "report_version": "1.0",
+  "evidence_summary": {
+    "overall_state": "E2_preliminary",
+    "confidence": 0.62,
+    "supporting_artifacts": ["dataset://run-42", "notebook://nb-7"]
+  },
+  "claims": [
+    {
+      "claim_id": "C1",
+      "text": "Protocol change improves yield under low-input conditions",
+      "status": "weak"
+    },
+    {
+      "claim_id": "C2",
+      "text": "Validation replicate count supports bounded generalization",
+      "status": "supported"
+    }
+  ],
+  "validation_results": {
+    "replicate_count": 3,
+    "negative_control_passed": true,
+    "statistical_power": "adequate"
+  }
+}
