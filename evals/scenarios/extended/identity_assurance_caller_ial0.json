@@ -19,5 +19,6 @@
   },
   "expected_scope": "protocol_draft",
   "expect_identity_assurance_level": "IAL0",
-  "expect_role_resolution_source": "caller"
+  "expect_role_resolution_source": "caller_supplied",
+  "expect_identity_source": "caller_json"
 }
