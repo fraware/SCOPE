@@ -38,6 +38,10 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
     decisions = [e for e in events if e.get("event_type") == "decision_submitted"]
     grants = [e for e in events if e.get("event_type") == "grant_issued"]
     violations = [e for e in events if e.get("event_type") == "runtime_scope_violation_attempted"]
+    confirmed_violations = [
+        e for e in events if e.get("event_type") == "runtime_scope_violation"
+    ]
+    sla_breaches = [e for e in events if e.get("event_type") == "review_sla_breached"]
     stale = [e for e in events if e.get("event_type") == "grant_expired"]
     revoked = [e for e in events if e.get("event_type") == "grant_revoked"]
     quality_warns = [e for e in events if e.get("event_type") == "quality_warning_emitted"]
@@ -239,6 +243,8 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
         "post_approval_protocol_drift_rate": len(post_protocol_drift) / max(len(grants), 1),
         "post_approval_evidence_downgrade_rate": len(post_evidence_downgrade) / max(len(grants), 1),
         "post_approval_runtime_violation_rate": len(violations) / max(len(grants), 1),
+        "runtime_violation_outcome_count": len(confirmed_violations),
+        "review_sla_breach_count": len(sla_breaches),
         "grant_use_count": len(grant_used),
         "grant_revoked_count": len(revoked),
         "review_assigned_count": len(review_assigned),
@@ -249,7 +255,7 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
     by_action_type = _by_action_type(decisions, stale)
 
     return {
-        "report_version": "0.5",
+        "report_version": "0.6",
         "policy_version": policy.version,
         "summary": {
             "total_decisions": len(decisions),
