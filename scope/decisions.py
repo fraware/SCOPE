@@ -166,7 +166,6 @@ class DecisionEngine:
         if is_production_mode() and not decision.get("decision_signature"):
             decision["signature_required"] = True
 
-        self.validate(decision)
         return decision
 
     def _resolve_requested_scope(

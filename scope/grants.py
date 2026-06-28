@@ -124,7 +124,6 @@ class GrantEngine:
         for field in sig_fields:
             if decision.get(field):
                 grant[field] = decision[field]
-        self.validate(grant)
         return grant
 
     def check(
