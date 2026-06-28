@@ -1,4 +1,4 @@
-version: scope-core-v0.4
+version: scope-core-v0.5
 thresholds:
   rubber_stamp_min_review_seconds: 20
   rubber_stamp_high_risk_count: 10
@@ -83,6 +83,14 @@ metrics:
   review_queue_length:
     category: burden
     v0_4_status: implemented
+  open_queue_count:
+    category: burden
+    description: Open review queue entries persisted on disk.
+    v0_5_status: implemented
+  overdue_queue_count:
+    category: burden
+    description: Assigned or open queue entries past SLA due date.
+    v0_5_status: implemented
   median_time_to_decision:
     category: burden
     v0_4_status: implemented
@@ -107,6 +115,14 @@ metrics:
   post_approval_evidence_downgrade_rate:
     category: outcome
     v0_4_status: implemented
+  open_queue_count:
+    category: queue
+    description: Open or assigned review queue entries on disk.
+    v0_5_status: implemented
+  overdue_queue_count:
+    category: queue
+    description: Queue entries past due_at still awaiting decision.
+    v0_5_status: implemented
   post_approval_runtime_violation_rate:
     category: outcome
     v0_4_status: implemented
