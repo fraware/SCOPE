@@ -1,6 +1,54 @@
 # AKTA to SCOPE to PF to PCS Demo
 
-This document walks through the full authorization chain using SCOPE v0.4.
+This document walks through the full authorization chain using SCOPE v0.5.1.
+
+## Primary path: `scope akta review`
+
+For the common case (single reviewer, approval at a declared scope), use the one-shot command:
+
+```powershell
+scope akta review `
+  --akta-record examples/protocol_drift/akta_record.json `
+  --akta-trigger examples/protocol_drift/review_trigger.json `
+  --grant-scope protocol_draft `
+  --reviewer examples/protocol_drift/reviewer_protocol_owner.json `
+  --decision-rationale "Narrow protocol draft approval only." `
+  --out-dir /tmp/akta_review_out
+```
+
+Outputs in `/tmp/akta_review_out/`:
+
+| File | Description |
+|------|-------------|
+| `scope_review_packet.json` | SCOPE review packet from AKTA inputs |
+| `scope_decision.json` | Scoped approval decision |
+| `scope_grant.json` | Bounded authorization grant |
+| `summary.json` | Machine-readable paths, scope, blocked tools, status |
+
+SCOPE rejects overbroad `--grant-scope` values against the packet's `requested_scope`.
+
+In production mode (`$env:SCOPE_PRODUCTION_MODE = "true"`), pass `--signing-key` with the
+reviewer's Ed25519 private key PEM. The command signs the decision before grant issue:
+
+```powershell
+$env:SCOPE_PRODUCTION_MODE = "true"
+scope akta review `
+  --akta-record examples/protocol_drift/akta_record.json `
+  --akta-trigger examples/protocol_drift/review_trigger.json `
+  --grant-scope protocol_draft `
+  --reviewer examples/protocol_drift/reviewer_protocol_owner.json `
+  --decision-rationale "Narrow protocol draft approval only." `
+  --signing-key keys/reviewer.pem `
+  --out-dir /tmp/akta_review_out
+```
+
+Without `--signing-key` in production mode, the command fails before writing a grant.
+
+For non-production workflows, sign the decision and re-issue the grant from saved artifacts (see Step 4 below).
+
+## Step-by-step workflow (advanced)
+
+Use individual CLI commands when you need VSA reports, multi-step review, or custom decision payloads.
 
 ## Prerequisites
 
@@ -129,7 +177,8 @@ PCS bundle includes manifest hashes for tamper detection.
 ## Step 7: Quality report
 
 ```powershell
-scope quality report --ledger /tmp/scope_events.jsonl --out /tmp/quality_report.json
+scope quality report --ledger /tmp/scope_events.jsonl --out /tmp/quality_report.json `
+  --queue-dir .scope/queues
 ```
 
 Report sections: summary, by_reviewer, by_role, by_action_type, warnings.
