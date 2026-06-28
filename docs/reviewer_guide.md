@@ -16,6 +16,19 @@ A SCOPE Packet includes:
 
 Rendered packets include explicit **Approval Permits** and **Approval Does NOT Permit** sections derived from policy. This display is for review coordination only and does not constitute certification or institutional approval.
 
+## Identity and signing (v0.7)
+
+Your decision records how your identity was verified:
+
+| Level | Meaning |
+|-------|---------|
+| IAL0 | Caller-supplied reviewer JSON only |
+| IAL1+ | Signed decision or OIDC-verified identity |
+
+In production mode, sign your decision before grant issue. Signing assurance level (SAL) is recorded on the grant. Institutions may require OIDC tokens (`--identity-token`) and RBAC enforcement (`--enforce-rbac`).
+
+See [identity_assurance.md](identity_assurance.md) and [signing_assurance.md](signing_assurance.md).
+
 ## Reviewer roles
 
 ### protocol_owner
@@ -73,4 +86,10 @@ Use `--replace-vote` to supersede a prior vote from the same reviewer.
 
 In production mode, submit your decision first, then sign with your Ed25519 private key before grant issue. Your `reviewer_public_key_ref` in the reviewer fixture must match the signing key (or be attached at sign time). Auditors verify with your public key only.
 
-Institutions may configure `policy/reviewer_key_registry.yaml` to bind reviewer IDs to expected public keys.
+Institutions may configure `policy/reviewer_key_registry.yaml` to bind reviewer IDs to expected public keys. See [key_management.md](key_management.md).
+
+## Related documentation
+
+- [institutional_pilot_guide.md](institutional_pilot_guide.md) — pilot workshop flow
+- [evidence_vocab_mapping.md](evidence_vocab_mapping.md) — evidence state aliases
+- [quality_metrics.md](quality_metrics.md) — how review quality is measured
