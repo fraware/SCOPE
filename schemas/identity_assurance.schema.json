@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/identity_assurance.schema.json",
+  "title": "SCOPE Identity Assurance Provenance",
+  "type": "object",
+  "required": ["identity_assurance_level", "role_resolution_source"],
+  "properties": {
+    "identity_assurance_level": {
+      "type": "string",
+      "enum": ["IAL0", "IAL1", "IAL2", "IAL3", "IAL4"]
+    },
+    "role_resolution_source": {
+      "type": "string",
+      "enum": [
+        "caller_supplied",
+        "local_signed_key",
+        "oidc_verified",
+        "org_rbac"
+      ]
+    },
+    "identity_source": {
+      "type": "string",
+      "enum": ["caller_json", "local_signed_key", "oidc_jwt"]
+    },
+    "delegation_id": { "type": "string" },
+    "identity_claim_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": true
+}

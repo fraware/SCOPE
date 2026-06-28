@@ -1,4 +1,4 @@
-"""Evaluation scenario runner for SCOPE v0.6."""
+"""Evaluation scenario runner for SCOPE v0.7."""
 
 from __future__ import annotations
 
@@ -16,13 +16,24 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scope import ScopeEngine
-from scope.errors import DecisionValidationError, RoleValidationError, ScopeValidationError
+from scope.errors import (
+    DecisionValidationError,
+    LedgerError,
+    RoleValidationError,
+    ScopeValidationError,
+)
+from scope.review_workflow import validate_transition
 from scope.signing import Ed25519Signer
 from tests.jwt_helpers import build_rs256_jwt, generate_rsa_keypair
 
 POLICY = ROOT / "policy"
 SCENARIOS_DIR = ROOT / "evals" / "scenarios"
 EXTENDED_DIR = SCENARIOS_DIR / "extended"
+LEDGER_ENV_KEYS = (
+    "SCOPE_LEDGER_DELIVERY_MODE",
+    "SCOPE_LEDGER_REMOTE_URL",
+    "SCOPE_LEDGER_REMOTE_TOKEN",
+)
 
 
 @dataclass
@@ -30,6 +41,125 @@ class ScenarioResult:
     name: str
     passed: bool
     message: str
+
+
+def _save_ledger_env() -> dict[str, str | None]:
+    return {key: os.environ.get(key) for key in LEDGER_ENV_KEYS}
+
+
+def _restore_ledger_env(saved: dict[str, str | None]) -> None:
+    for key, value in saved.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+
+
+def _apply_ledger_env(scenario: dict[str, Any]) -> None:
+    if scenario.get("ledger_delivery_mode"):
+        os.environ["SCOPE_LEDGER_DELIVERY_MODE"] = str(scenario["ledger_delivery_mode"])
+    if scenario.get("ledger_remote_url"):
+        os.environ["SCOPE_LEDGER_REMOTE_URL"] = str(scenario["ledger_remote_url"])
+
+
+def _run_queue_transition_scenario(scenario: dict[str, Any]) -> ScenarioResult:
+    name = scenario["name"]
+    trans = scenario["expect_queue_transition_error"]
+    try:
+        validate_transition(trans["from"], trans["to"])
+        return ScenarioResult(
+            name,
+            False,
+            f"Expected transition error for {trans['from']} -> {trans['to']}",
+        )
+    except ScopeValidationError as exc:
+        return ScenarioResult(name, True, f"Correctly rejected: {exc}")
+
+
+def _assert_identity_provenance(
+    scenario: dict[str, Any],
+    decision: dict[str, Any],
+    grant: dict[str, Any] | None = None,
+) -> ScenarioResult | None:
+    name = scenario["name"]
+    expected_ial = scenario.get("expect_identity_assurance_level")
+    if expected_ial:
+        actual = (decision.get("provenance") or {}).get("identity_assurance_level")
+        if actual != expected_ial:
+            return ScenarioResult(
+                name,
+                False,
+                f"Decision IAL {actual} != {expected_ial}",
+            )
+        if grant is not None:
+            grant_ial = (grant.get("provenance") or {}).get("identity_assurance_level")
+            if grant_ial != expected_ial:
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"Grant IAL {grant_ial} != {expected_ial}",
+                )
+    expected_source = scenario.get("expect_role_resolution_source")
+    if expected_source:
+        actual = (decision.get("provenance") or {}).get("role_resolution_source")
+        if actual != expected_source:
+            return ScenarioResult(
+                name,
+                False,
+                f"Decision role_resolution_source {actual} != {expected_source}",
+            )
+        if grant is not None:
+            grant_source = (grant.get("provenance") or {}).get("role_resolution_source")
+            if grant_source != expected_source:
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"Grant role_resolution_source {grant_source} != {expected_source}",
+                )
+
+    expected_identity_source = scenario.get("expect_identity_source")
+    if expected_identity_source:
+        actual = (decision.get("provenance") or {}).get("identity_source")
+        if actual != expected_identity_source:
+            return ScenarioResult(
+                name,
+                False,
+                f"Decision identity_source {actual} != {expected_identity_source}",
+            )
+        if grant is not None:
+            grant_source = (grant.get("provenance") or {}).get("identity_source")
+            if grant_source != expected_identity_source:
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"Grant identity_source {grant_source} != {expected_identity_source}",
+                )
+
+    if grant is not None and scenario.get("expect_authority_checks", True):
+        decision_checks = (decision.get("provenance") or {}).get("authority_checks")
+        grant_checks = (grant.get("provenance") or {}).get("authority_checks")
+        if not decision_checks:
+            return ScenarioResult(name, False, "Decision missing authority_checks provenance")
+        if not grant_checks:
+            return ScenarioResult(name, False, "Grant missing authority_checks provenance")
+        if grant_checks != decision_checks:
+            return ScenarioResult(
+                name,
+                False,
+                "Grant authority_checks != decision authority_checks",
+            )
+
+    expected_sal = scenario.get("expect_signing_assurance_level")
+    if expected_sal and grant is not None:
+        actual_sal = (grant.get("provenance") or {}).get("signing_assurance_level")
+        if actual_sal != expected_sal:
+            return ScenarioResult(
+                name,
+                False,
+                f"Grant SAL {actual_sal} != {expected_sal}",
+            )
+
+    return None
 
 
 def _load(name: str, *, extended: bool = False) -> dict[str, Any]:
@@ -77,9 +207,83 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
     else:
         os.environ.pop("SCOPE_PRODUCTION_MODE", None)
 
-    engine = ScopeEngine.from_policy_dir(POLICY)
+    if scenario.get("expect_queue_transition_error"):
+        return _run_queue_transition_scenario(scenario)
+
+    saved_ledger_env = _save_ledger_env()
+    try:
+        defer_ledger = scenario.get("defer_ledger_env_until_grant")
+        if not defer_ledger:
+            _apply_ledger_env(scenario)
+        with tempfile.TemporaryDirectory() as ledger_tmp:
+            ledger_path = None
+            if scenario.get("ledger_delivery_mode"):
+                ledger_path = Path(ledger_tmp) / "events.jsonl"
+            engine = ScopeEngine.from_policy_dir(POLICY, ledger_path=ledger_path)
+            return _run_scenario_with_engine(engine, scenario, defer_ledger_env=defer_ledger)
+    finally:
+        _restore_ledger_env(saved_ledger_env)
+
+
+def _run_akta_review_scenario(
+    engine: ScopeEngine,
+    scenario: dict[str, Any],
+) -> ScenarioResult:
+    from scope.akta_review import run_akta_review
+    from scope.schema_util import validate_artifact
+
+    name = scenario["name"]
+    with tempfile.TemporaryDirectory() as out_dir:
+        signing_key: Path | None = None
+        if scenario.get("sign_before_grant"):
+            key = Path(out_dir) / "reviewer.pem"
+            pub = Path(out_dir) / "reviewer.pub"
+            Ed25519Signer.generate_keypair(key, pub)
+            signing_key = key
+        summary = run_akta_review(
+            engine,
+            akta_record=scenario["akta_record"],
+            akta_trigger=scenario["akta_trigger"],
+            grant_scope=scenario.get("grant_scope", scenario["decision"]["approved_scope"]),
+            reviewer=scenario["reviewer"],
+            decision_rationale=scenario["decision"]["rationale"],
+            out_dir=out_dir,
+            signing_key=signing_key,
+        )
+
+        validate_artifact(summary, "scope_akta_review_summary.schema.json")
+        expected_sal = scenario.get("expect_signing_assurance_level")
+        if expected_sal and summary.get("signing_assurance_level") != expected_sal:
+            return ScenarioResult(
+                name,
+                False,
+                f"Summary SAL {summary.get('signing_assurance_level')} != {expected_sal}",
+            )
+        expected_ial = scenario.get("expect_identity_assurance_level")
+        if expected_ial and summary.get("identity_assurance_level") != expected_ial:
+            return ScenarioResult(
+                name,
+                False,
+                f"Summary IAL {summary.get('identity_assurance_level')} != {expected_ial}",
+            )
+        for field in ("packet_path", "decision_path", "grant_path"):
+            path = Path(summary[field])
+            if not path.is_file():
+                return ScenarioResult(name, False, f"Missing artifact: {field}")
+        return ScenarioResult(name, True, "AKTA review contract OK")
+
+
+def _run_scenario_with_engine(
+    engine: ScopeEngine,
+    scenario: dict[str, Any],
+    *,
+    defer_ledger_env: bool = False,
+) -> ScenarioResult:
     name = scenario["name"]
     try:
+        if scenario.get("run_akta_review"):
+            return _run_akta_review_scenario(engine, scenario)
+
         vsa_path = scenario.get("vsa_report_path")
         vsa_report = ROOT / vsa_path if vsa_path else None
         packet = engine.create_packet(
@@ -142,13 +346,22 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
                     "exp": int(time.time()) + 3600,
                 },
             )
+            if scenario.get("enforce_rbac"):
+                os.environ["SCOPE_ENFORCE_RBAC"] = "true"
             decision = engine.submit_decision(
                 packet,
                 scenario["reviewer"],
                 scenario["decision"],
                 identity_token=token,
+                enforce_rbac=scenario.get("enforce_rbac"),
             )
+            identity_check = _assert_identity_provenance(scenario, decision)
+            if identity_check is not None:
+                return identity_check
             grant = engine.issue_grant(packet, decision)
+            identity_check = _assert_identity_provenance(scenario, decision, grant)
+            if identity_check is not None:
+                return identity_check
             approved = grant["authorization"]["approved_scope"]
             if scenario.get("expected_scope") and approved != scenario["expected_scope"]:
                 return ScenarioResult(
@@ -183,7 +396,29 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
                 Ed25519Signer.generate_keypair(key, pub)
                 decision = engine.sign_decision(decision, Ed25519Signer(key))
 
+        if scenario.get("expect_grant_error"):
+            if defer_ledger_env:
+                from scope.ledger import ScopeLedger
+
+                _apply_ledger_env(scenario)
+                assert engine.ledger.path is not None
+                engine.ledger = ScopeLedger(engine.ledger.path)
+            try:
+                engine.issue_grant(packet, decision)
+                return ScenarioResult(name, False, "Expected grant error but succeeded")
+            except LedgerError as exc:
+                if "grant_issued" not in str(exc) and defer_ledger_env:
+                    return ScenarioResult(
+                        name,
+                        False,
+                        f"Expected grant_issued fail_closed error, got: {exc}",
+                    )
+                return ScenarioResult(name, True, f"Correctly rejected: {exc}")
+
         grant = engine.issue_grant(packet, decision)
+        identity_check = _assert_identity_provenance(scenario, decision, grant)
+        if identity_check is not None:
+            return identity_check
 
         violation = scenario.get("record_runtime_violation")
         if violation:
@@ -230,6 +465,8 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
     except Exception as exc:
         if scenario.get("expect_decision_error"):
             return ScenarioResult(name, True, f"Correctly rejected: {exc}")
+        if scenario.get("expect_grant_error") and isinstance(exc, LedgerError):
+            return ScenarioResult(name, True, f"Correctly rejected: {exc}")
         return ScenarioResult(name, False, str(exc))
 
 
@@ -253,6 +490,11 @@ EXTENDED_SCENARIOS = [
     "queue_auto_assign.json",
     "runtime_violation_outcome_metric.json",
     "biosecurity_mandatory_session.json",
+    "identity_assurance_caller_ial0.json",
+    "identity_assurance_local_signed_ial1.json",
+    "queue_invalid_transition.json",
+    "fail_closed_grant_blocked.json",
+    "akta_review_signed_summary.json",
 ]
 
 
@@ -273,7 +515,7 @@ def main() -> int:
     parser.add_argument(
         "--extended",
         action="store_true",
-        help="Also run extended v0.5 scenarios (multi-review, signing, VSA, overlay)",
+        help="Also run extended v0.7 scenarios (IAL, SAL, queue, ledger, AKTA contract)",
     )
     args = parser.parse_args()
 

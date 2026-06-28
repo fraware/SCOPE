@@ -1,0 +1,25 @@
+{
+  "name": "identity_assurance_local_signed_ial1",
+  "akta_record": {
+    "record_id": "AKTA-EVAL-IAL1",
+    "scientific_action_type": "A5_protocol_modification"
+  },
+  "akta_trigger": {
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "draft_protocol",
+    "requested_tool": "protocol_editor.draft_change",
+    "requested_scope": "protocol_draft"
+  },
+  "reviewer": {"reviewer_id": "po1", "role": "protocol_owner"},
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "protocol_draft",
+    "rationale": "Local signed key must record IAL1 provenance"
+  },
+  "expected_scope": "protocol_draft",
+  "sign_before_grant": true,
+  "expect_identity_assurance_level": "IAL1",
+  "expect_role_resolution_source": "local_signed_key",
+  "expect_identity_source": "local_signed_key"
+}

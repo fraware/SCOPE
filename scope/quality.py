@@ -248,6 +248,7 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
         "grant_use_count": len(grant_used),
         "grant_revoked_count": len(revoked),
         "review_assigned_count": len(review_assigned),
+        "ledger_delivery_failure_count": _ledger_delivery_failures(events),
     }
 
     by_reviewer = _by_reviewer(decisions, fast_approvals)
@@ -255,7 +256,7 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
     by_action_type = _by_action_type(decisions, stale)
 
     return {
-        "report_version": "0.6",
+        "report_version": "0.7",
         "policy_version": policy.version,
         "summary": {
             "total_decisions": len(decisions),
@@ -386,6 +387,15 @@ def _by_action_type(
         action: {"decisions": counts[action], "stale_grant_attempts": stale_counts.get(action, 0)}
         for action in counts
     }
+
+
+def _ledger_delivery_failures(events: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for e in events
+        if e.get("delivery_state") in ("failed", "spooled")
+        or (e.get("metadata") or {}).get("delivery_state") in ("failed", "spooled")
+    )
 
 
 def emit_quality_warning(

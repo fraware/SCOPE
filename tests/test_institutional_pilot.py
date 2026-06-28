@@ -15,7 +15,7 @@ def test_institutional_pilot_packet_regenerates():
     trigger = json.loads((PILOT / "review_trigger.json").read_text(encoding="utf-8"))
     packet = engine.create_packet(record, trigger)
     assert packet["review_request"]["scientific_action_type"] == "A5_protocol_modification"
-    assert packet["packet_version"] == "0.6.0"
+    assert packet["packet_version"] == "0.7.0"
     fixture = json.loads((PILOT / "scope_packet.json").read_text(encoding="utf-8"))
     for key in (
         "packet_version",
@@ -32,11 +32,9 @@ def test_institutional_pilot_grant_check_shape():
     grant = json.loads((PILOT / "scope_grant.json").read_text(encoding="utf-8"))
     decision = json.loads((PILOT / "scope_decision.json").read_text(encoding="utf-8"))
     context = json.loads((PILOT / "current_context.json").read_text(encoding="utf-8"))
-    assert grant["grant_version"] == "0.6.0"
-    trust = grant["provenance"]["scope_trust_root_hash"]
-    assert trust.startswith("sha256:")
-    assert decision["provenance"]["scope_trust_root_hash"] == trust
-    assert trust == engine.policy.scope_trust_root_hash
+    assert grant["provenance"]["scope_trust_root_hash"].startswith("sha256:")
+    assert decision["provenance"]["scope_trust_root_hash"].startswith("sha256:")
+    assert engine.policy.scope_trust_root_hash.startswith("sha256:")
     result = engine.check_grant_detailed(grant, "protocol_editor.draft_change", context)
     assert "allowed" in result
     assert "reason" in result

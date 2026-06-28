@@ -9,7 +9,9 @@ from typing import Any
 from scope import ScopeEngine
 from scope.config import is_production_mode
 from scope.errors import GrantValidationError, ScopeValidationError
+from scope.integration_versions import AKTA_REVIEW_CONTRACT_VERSION
 from scope.review_assignment import resolve_review_assignment
+from scope.schema_util import validate_artifact
 from scope.scopes import is_stronger, is_weaker_or_equal, validate_scope
 from scope.signing import Ed25519Signer, Signer
 
@@ -115,6 +117,7 @@ def run_akta_review(
     queue_dir: str | Path | None = None,
     identity_token: str | None = None,
     session_mode: bool = False,
+    enforce_rbac: bool | None = None,
 ) -> dict[str, Any]:
     """Create packet, submit approval decision, issue grant; write artifacts to out_dir."""
     out = Path(out_dir)
@@ -152,6 +155,7 @@ def run_akta_review(
         reviewer_data,
         decision_input,
         identity_token=identity_token,
+        enforce_rbac=enforce_rbac,
     )
 
     signer = _resolve_signer(
@@ -170,11 +174,17 @@ def run_akta_review(
     elif signer is not None:
         decision = engine.sign_decision(decision, signer)
 
-    grant = engine.issue_grant(packet, decision)
+    grant = engine.issue_grant(
+        packet,
+        decision,
+        signing_provider=signing_provider,
+    )
 
     queue_entry = None
     if queue_dir is not None:
         queue_entry = engine.create_review_queue(packet, queue_dir=queue_dir)
+        queue_entry.assign(reviewer_data)
+        queue_entry.mark_in_review()
         queue_entry.mark_decided(decision["decision_id"])
         queue_entry.mark_granted(grant["grant_id"])
         queue_entry.save()
@@ -194,6 +204,8 @@ def run_akta_review(
             fh.write("\n")
 
     auth = grant.get("authorization", {})
+    provenance = grant.get("provenance") or {}
+    requested_scope = packet["review_request"].get("requested_scope")
     summary: dict[str, Any] = {
         "status": "completed",
         "packet_path": str(packet_path),
@@ -203,13 +215,19 @@ def run_akta_review(
         "decision_id": decision["decision_id"],
         "grant_id": grant["grant_id"],
         "approved_scope": auth.get("approved_scope", grant_scope),
+        "requested_scope": requested_scope,
         "allowed_tools": auth.get("allowed_tools", []),
         "blocked_tools": auth.get("blocked_tools", []),
         "decision_type": decision["decision"]["type"],
-        "scope_trust_root_hash": decision.get("provenance", {}).get("scope_trust_root_hash"),
+        "adapter_contract_version": AKTA_REVIEW_CONTRACT_VERSION,
+        "identity_assurance_level": provenance.get("identity_assurance_level", "IAL0"),
+        "signing_assurance_level": provenance.get("signing_assurance_level", "SAL0"),
+        "production_mode": is_production_mode(),
+        "scope_trust_root_hash": provenance.get("scope_trust_root_hash"),
     }
     if queue_entry is not None:
         summary["queue_id"] = queue_entry.queue_id
+    validate_artifact(summary, "scope_akta_review_summary.schema.json")
     with summary_path.open("w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2, sort_keys=True)
         fh.write("\n")

@@ -336,8 +336,8 @@ def test_quality_endpoint(client):
     resp = client.get("/v0/quality")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["report_version"] == "0.6"
-    assert body["policy_version"] == "scope-core-v0.6"
+    assert body["report_version"] == "0.7"
+    assert body["policy_version"] == "scope-core-v0.7"
     assert "metrics" in body
     assert "warnings" in body
 
@@ -363,6 +363,7 @@ def test_quality_endpoint_custom_queue_dir(client, tmp_path, monkeypatch):
 
 def test_akta_review_rest_endpoint(client, tmp_path):
     from adapters.generic_rest import server
+    from scope.config import is_production_mode
 
     server.reset_engine_cache()
     out_dir = tmp_path / "akta_out"
@@ -380,6 +381,9 @@ def test_akta_review_rest_endpoint(client, tmp_path):
     assert summary["status"] == "completed"
     assert summary["approved_scope"] == "protocol_draft"
     assert summary["scope_trust_root_hash"].startswith("sha256:")
+    assert summary["identity_assurance_level"] == "IAL0"
+    assert summary["signing_assurance_level"] == "SAL0"
+    assert summary["production_mode"] is is_production_mode()
     assert (out_dir / "scope_grant.json").exists()
 
 
@@ -456,13 +460,14 @@ def test_grant_check_returns_reason_and_code(client):
 def test_review_queue_rest_endpoints(client, tmp_path, monkeypatch):
     from adapters.generic_rest import server
 
-    monkeypatch.setenv("SCOPE_QUEUE_DIR", str(tmp_path / "queues"))
+    queue_dir = tmp_path / "queues"
+    monkeypatch.setenv("SCOPE_QUEUE_DIR", str(queue_dir))
     server._engine = None
 
     packet = client.post("/v0/packets", json=_packet_payload()).json()
     created = client.post(
         "/v0/review-queue",
-        json={"packet": packet, "sla_hours": 24, "queue_dir": str(tmp_path / "queues")},
+        json={"packet": packet, "sla_hours": 24, "queue_dir": str(queue_dir)},
     )
     assert created.status_code == 200
     queue_id = created.json()["queue_id"]
@@ -470,14 +475,100 @@ def test_review_queue_rest_endpoints(client, tmp_path, monkeypatch):
     assigned = client.post(
         f"/v0/review-queue/{queue_id}/assign",
         json={"reviewer": {"reviewer_id": "r1", "role": "protocol_owner"}},
-        params={"queue_dir": str(tmp_path / "queues")},
+        params={"queue_dir": str(queue_dir)},
     )
     assert assigned.status_code == 200
     assert assigned.json()["status"] == "assigned"
 
-    listed = client.get("/v0/review-queue", params={"queue_dir": str(tmp_path / "queues")})
+    in_review = client.post(
+        f"/v0/review-queue/{queue_id}/in-review",
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert in_review.status_code == 200
+    assert in_review.json()["status"] == "in_review"
+
+    needs_info = client.post(
+        f"/v0/review-queue/{queue_id}/needs-information",
+        json={"reason": "missing protocol appendix"},
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert needs_info.status_code == 200
+    assert needs_info.json()["status"] == "needs_information"
+
+    info_received = client.post(
+        f"/v0/review-queue/{queue_id}/information-received",
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert info_received.status_code == 200
+    assert info_received.json()["status"] == "in_review"
+
+    expired = client.post(
+        f"/v0/review-queue/{queue_id}/expire",
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert expired.status_code == 200
+    assert expired.json()["status"] == "expired"
+
+    reopened = client.post(
+        f"/v0/review-queue/{queue_id}/reopen",
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert reopened.status_code == 200
+    assert reopened.json()["status"] == "open"
+
+    assigned_again = client.post(
+        f"/v0/review-queue/{queue_id}/assign",
+        json={"reviewer": {"reviewer_id": "r1", "role": "protocol_owner"}},
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert assigned_again.status_code == 200
+
+    escalated = client.post(
+        f"/v0/review-queue/{queue_id}/escalate",
+        json={
+            "reviewer": {"reviewer_id": "lead1", "role": "lab_operations_lead"},
+            "reason": "SLA breach",
+            "actor_id": "ops-bot",
+        },
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert escalated.status_code == 200
+    assert escalated.json()["status"] == "escalated"
+
+    cancelled = client.post(
+        f"/v0/review-queue/{queue_id}/cancel",
+        json={"reason": "duplicate request"},
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+
+    listed = client.get("/v0/review-queue", params={"queue_dir": str(queue_dir)})
     assert listed.status_code == 200
-    assert listed.json()["open_queue_count"] == 1
+    counts = listed.json()["status_counts"]
+    assert counts.get("cancelled", 0) >= 1
+
+
+def test_review_queue_invalid_transition_rest_error(client, tmp_path, monkeypatch):
+    from adapters.generic_rest import server
+
+    queue_dir = tmp_path / "queues"
+    server._engine = None
+
+    packet = client.post("/v0/packets", json=_packet_payload()).json()
+    created = client.post(
+        "/v0/review-queue",
+        json={"packet": packet, "sla_hours": 24, "queue_dir": str(queue_dir)},
+    )
+    queue_id = created.json()["queue_id"]
+
+    resp = client.post(
+        f"/v0/review-queue/{queue_id}/grant",
+        json={"grant_id": "SCOPE-GRANT-BAD"},
+        params={"queue_dir": str(queue_dir)},
+    )
+    assert resp.status_code == 400
+    assert "expected decided" in resp.json()["detail"]
 
 
 def test_key_registry_rest_endpoints(client, tmp_path, monkeypatch):

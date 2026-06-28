@@ -37,14 +37,14 @@
   },
   "grant_hash": "sha256:bf8788ee0f31ea9f639973e535e6c79fcb1ceb0eb3fa2bed30a51de8903239b0",
   "grant_id": "SCOPE-GRANT-52BA47",
-  "grant_version": "0.6.0",
+  "grant_version": "0.7.0",
   "provenance": {
     "akta_policy_hash": null,
     "reviewer_key_registry_hash": "sha256:1dec33e3bda7220f7c3ab33641c3384c4d550be30e468e27e1600eee85751e8d",
-    "reviewer_key_registry_version": "scope-core-v0.6",
+    "reviewer_key_registry_version": "scope-core-v0.7",
     "reviewer_role_policy_hash": "sha256:b8594a04fc2c29ca3c5280bb8a30734463a576af19d2b0f7cc9fb5b8bcb5ed8d",
     "scope_policy_hash": "sha256:b8594a04fc2c29ca3c5280bb8a30734463a576af19d2b0f7cc9fb5b8bcb5ed8d",
-    "scope_policy_version": "scope-core-v0.6",
+    "scope_policy_version": "scope-core-v0.7",
     "scope_trust_root_hash": "sha256:90de41557b588620c483ebd060707566a520c73a39416b381ba9f769ef3b87d7"
   },
   "source": {

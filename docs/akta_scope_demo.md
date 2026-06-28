@@ -1,6 +1,8 @@
 # AKTA to SCOPE to PF to PCS Demo
 
-This document walks through the full authorization chain using SCOPE v0.5.1.
+This document walks through the full authorization chain using SCOPE v0.7.
+
+Related: [akta_review_contract.md](akta_review_contract.md), [external_integration_contracts.md](external_integration_contracts.md), [institutional_pilot_guide.md](institutional_pilot_guide.md).
 
 ## Primary path: `scope akta review`
 
@@ -23,12 +25,13 @@ Outputs in `/tmp/akta_review_out/`:
 | `scope_review_packet.json` | SCOPE review packet from AKTA inputs |
 | `scope_decision.json` | Scoped approval decision |
 | `scope_grant.json` | Bounded authorization grant |
-| `summary.json` | Machine-readable paths, scope, blocked tools, status |
+| `summary.json` | Machine-readable contract summary (validated against schema) |
+
+`summary.json` includes `adapter_contract_version` (`scope-akta-review-v0.7`), `identity_assurance_level`, `signing_assurance_level`, and `production_mode`.
 
 SCOPE rejects overbroad `--grant-scope` values against the packet's `requested_scope`.
 
-In production mode (`$env:SCOPE_PRODUCTION_MODE = "true"`), pass `--signing-key` with the
-reviewer's Ed25519 private key PEM. The command signs the decision before grant issue:
+In production mode (`$env:SCOPE_PRODUCTION_MODE = "true"`), pass `--signing-key` or `--signing-provider` with the reviewer's key. The command signs the decision before grant issue:
 
 ```powershell
 $env:SCOPE_PRODUCTION_MODE = "true"
@@ -42,7 +45,16 @@ scope akta review `
   --out-dir /tmp/akta_review_out
 ```
 
-Without `--signing-key` in production mode, the command fails before writing a grant.
+Optional institutional identity:
+
+```powershell
+scope akta review ... `
+  --identity-token $env:OIDC_TOKEN `
+  --enforce-rbac `
+  --signing-provider registry --reviewer-id protocol_owner_1
+```
+
+Without signing credentials in production mode, the command fails before writing a grant.
 
 For non-production workflows, sign the decision and re-issue the grant from saved artifacts (see Step 4 below).
 
@@ -172,7 +184,7 @@ scope export pcs `
   --validate
 ```
 
-PCS bundle includes manifest hashes for tamper detection.
+PCS bundle includes manifest hashes for tamper detection. Obligation version: `pf-core-v0.5`; manifest version: `pcs-v0.5`.
 
 ## Step 7: Quality report
 
@@ -192,4 +204,4 @@ akta record evaluate --input action.json --out akta_record.json
 akta review trigger --record akta_record.json --out review_trigger.json
 ```
 
-SCOPE consumes both artifacts via `scope packet create`.
+SCOPE consumes both artifacts via `scope packet create` or the one-shot `scope akta review`.

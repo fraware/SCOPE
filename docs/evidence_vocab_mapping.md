@@ -34,3 +34,5 @@ AKTA and SCOPE share an evidence-state vocabulary with historical aliases. SCOPE
 ## Quality warning
 
 When a reviewer submits an approval decision (`approve`, `approve_narrower_scope`) and the packet `scientific_context.evidence_state` is in the weak set, SCOPE emits ledger event `quality_warning_emitted` with `warning_type: approval_despite_low_evidence`.
+
+See [external_integration_contracts.md](external_integration_contracts.md) for AKTA import behavior and [quality_metrics.md](quality_metrics.md) for related metrics.

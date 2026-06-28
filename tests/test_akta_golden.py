@@ -35,4 +35,4 @@ def test_nested_akta_record_golden_mapping():
     assert constraints["allowed_next_steps"] == golden["allowed_next_steps"]
     assert req["requested_scope"] == golden["inferred_requested_scope"]
     assert req["scope_inference_source"] == golden["scope_inference_source"]
-    assert packet["packet_version"] == "0.6.0"
+    assert packet["packet_version"] == "0.7.0"

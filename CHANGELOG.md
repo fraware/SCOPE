@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.7.0 (2026-06-28)
+
+Institutional pilot hardening release:
+
+- **Identity assurance (IAL0–IAL4)**: `scope/identity_assurance.py`, provenance on decisions/grants (including session grants), OIDC + org RBAC wiring; `identity_source` and `authority_checks` on decision/grant provenance
+- **RBAC vs SCOPE authority separation**: two-stage checks in `scope/authority.py` with explicit `authority_checks` provenance block
+- **Ledger delivery semantics**: `best_effort`, `at_least_once`, `fail_closed` modes with spool, `delivery_state`, and fail-closed blocking on high-risk grant issuance
+- **Review queue state machine**: explicit transitions (`in_review`, `needs_information`, `escalated`, `expired`, reopen)
+- **Signing assurance (SAL0–SAL4)**: minimum policy, production enforcement, HSM/KMS external interface
+- **Frozen AKTA review contract**: `summary.json` schema, `scope-akta-review-v0.7` adapter version
+- Policy bundle tagged `scope-core-v0.7`
+
+### Audit fixes (pre-release)
+
+- Grant provenance inherits `identity_claim_hash`, `authority_checks`, and `delegation_id` from issuing decisions (including session grants)
+- `summary.json` includes `production_mode` on all AKTA review paths; schema and docs aligned
+- Review queue: `information_received_at`, escalation reason/actor fields, ledger event on engine escalation
+- End-to-end tests and extended evals assert decision/grant provenance field parity
+
 ## v0.6.0 (2026-06-28)
 
 Institutional foundations release:

@@ -1,4 +1,4 @@
-version: scope-core-v0.6
+version: scope-core-v0.7
 description: Map OIDC JWT claims to SCOPE reviewer identity.
 claim_mappings:
   reviewer_id: sub

@@ -42,15 +42,16 @@ def scan_overdue_queues(
             "overdue": True,
             "dry_run": dry_run,
             "escalated": False,
+            "dashboard_warning": True,
         }
         if not dry_run and auto_escalate and escalation_reviewer:
-            queue._data["escalated"] = True
-            queue._data["escalation_reviewer"] = dict(escalation_reviewer)
             if queue.status == "open":
                 queue.assign(escalation_reviewer)
+            queue.mark_escalated(escalation_reviewer)
             queue.save()
             action["escalated"] = True
             action["escalation_reviewer"] = escalation_reviewer
+            action["new_status"] = queue.status
         results.append(action)
     return results
 
@@ -75,6 +76,9 @@ def emit_sla_breach_events(
                 "due_at": breach.get("due_at"),
                 "escalated": breach.get("escalated", False),
                 "escalation_reviewer": breach.get("escalation_reviewer"),
+                "dashboard_warning": breach.get("dashboard_warning", True),
+                "queue_status": breach.get("status"),
+                "new_status": breach.get("new_status"),
             },
         )
         events.append(event)

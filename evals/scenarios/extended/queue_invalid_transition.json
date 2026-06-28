@@ -1,0 +1,7 @@
+{
+  "name": "queue_invalid_transition_blocked",
+  "expect_queue_transition_error": {
+    "from": "open",
+    "to": "granted"
+  }
+}

@@ -1,26 +1,30 @@
-# Key management (v0.6)
+# Key Management (v0.7)
 
 SCOPE supports optional local binding between `reviewer_id` and Ed25519 public keys via `policy/reviewer_key_registry.yaml`.
 
-## Signing providers (v0.6)
+See also [signing_assurance.md](signing_assurance.md) and [trusted_boundary.md](trusted_boundary.md).
 
-| Provider | CLI flag | Description |
-|----------|----------|-------------|
-| `local` | `--signing-key` / `--key` | Explicit Ed25519 private key PEM (default) |
-| `env` | `--signing-provider env` | Reads `SCOPE_SIGNING_KEY` path |
-| `registry` | `--signing-provider registry --reviewer-id X` | Pilot: `signing_key_path` in registry entry |
+## Signing providers
+
+| Provider | CLI flag | SAL level | Description |
+|----------|----------|-----------|-------------|
+| `local` | `--signing-key` / `--key` | SAL1 | Explicit Ed25519 private key PEM (default) |
+| `env` | `--signing-provider env` | SAL2 | Reads `SCOPE_SIGNING_KEY` path |
+| `registry` | `--signing-provider registry --reviewer-id X` | SAL3 | Pilot: `signing_key_path` in registry entry |
 
 ```bash
 scope decision sign --decision d.json --signing-provider env --out signed.json
-scope akta review ... --signing-provider registry --reviewer-id ds1 --signing-key ignored
+scope akta review ... --signing-provider registry --reviewer-id ds1
 ```
 
 **Pilot only:** `signing_key_path` in `reviewer_key_registry.yaml` references a local private key for institutional pilots. Do not use in production; prefer HSM or env-scoped keys.
 
+Production mode enforces minimum SAL per scope via `policy/minimum_signing_assurance.yaml` (default SAL1; high-risk scopes such as `robot_queue_submission` require SAL3).
+
 ## Registry file
 
 ```yaml
-version: scope-core-v0.5
+version: scope-core-v0.7
 reviewers:
   protocol_owner_1:
     public_key_ref: sha256:...
@@ -96,4 +100,4 @@ Use `scope_trust_root_hash` when a downstream system needs a single digest bindi
 
 - Treat the registry as institution-local policy, version-controlled separately from reviewer PEM files.
 - Rotate keys by registering a new public key ref, re-signing outstanding decisions if needed, and bumping registry version.
-- Production deployments should store private keys in an HSM or institutional secret store; SCOPE v0.5 still signs locally via PEM paths only.
+- Production deployments should store private keys in an HSM or institutional secret store. SCOPE v0.7 records signing assurance level (SAL) on provenance; wire external HSM/KMS via `HsmKmsSigningProvider` (SAL4 interface only).

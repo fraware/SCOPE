@@ -784,6 +784,88 @@ def review_queue_list(queue_dir: str | None, policy: str) -> None:
     click.echo(json.dumps(engine.review_queue_status(queue_dir=queue_dir), indent=2))
 
 
+@queue_group.command("in-review")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+def review_queue_in_review(queue_path: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.mark_in_review()
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("needs-information")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option("--reason", default="")
+def review_queue_needs_information(queue_path: str, reason: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.mark_needs_information(reason=reason)
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("information-received")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+def review_queue_information_received(queue_path: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.mark_information_received()
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("reopen")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+def review_queue_reopen(queue_path: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.reopen()
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("expire")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+def review_queue_expire(queue_path: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.expire()
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("escalate-entry")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option("--reviewer", type=click.Path(exists=True), default=None)
+@click.option("--reason", default="", help="Escalation reason recorded in queue artifact.")
+@click.option("--actor-id", default=None, help="Actor performing the escalation.")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+@click.option("--ledger", type=click.Path(), default=None)
+def review_queue_escalate_entry(
+    queue_path: str,
+    reviewer: str | None,
+    reason: str,
+    actor_id: str | None,
+    policy: str,
+    ledger: str | None,
+) -> None:
+    engine = _engine(policy, ledger)
+    escalation = _load_json(reviewer) if reviewer else None
+    entry = engine.escalate_review_queue_entry(
+        queue_path,
+        escalation,
+        reason=reason,
+        actor_id=actor_id,
+    )
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
 @queue_group.command("decide")
 @click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
 @click.option("--decision-id", required=True)
@@ -804,6 +886,18 @@ def review_queue_grant(queue_path: str, grant_id: str) -> None:
 
     entry = ReviewQueue.load(queue_path)
     entry.mark_granted(grant_id)
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("cancel")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option("--reason", default="")
+def review_queue_cancel(queue_path: str, reason: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.cancel(reason=reason)
     entry.save(queue_path)
     click.echo(json.dumps(entry.status_summary(), indent=2))
 

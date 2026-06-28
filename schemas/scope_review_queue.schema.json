@@ -17,18 +17,38 @@
     "packet_id": { "type": "string" },
     "status": {
       "type": "string",
-      "enum": ["open", "assigned", "decided", "granted", "closed", "cancelled", "completed"]
+      "enum": [
+        "open",
+        "assigned",
+        "in_review",
+        "needs_information",
+        "escalated",
+        "decided",
+        "granted",
+        "expired",
+        "closed",
+        "cancelled"
+      ]
     },
     "created_at": { "type": "string" },
     "assigned_at": { "type": "string" },
+    "in_review_at": { "type": "string" },
+    "needs_information_at": { "type": "string" },
+    "needs_information_reason": { "type": "string" },
+    "escalated_at": { "type": "string" },
+    "escalated": { "type": "boolean" },
     "due_at": { "type": "string" },
-    "completed_at": { "type": "string" },
+    "expired_at": { "type": "string" },
+    "reopened_at": { "type": "string" },
     "decided_at": { "type": "string" },
     "granted_at": { "type": "string" },
     "closed_at": { "type": "string" },
+    "cancelled_at": { "type": "string" },
     "decision_id": { "type": "string" },
     "grant_id": { "type": "string" },
     "close_reason": { "type": "string" },
+    "cancel_reason": { "type": "string" },
+    "sla_hours": { "type": "integer" },
     "reviewer": {
       "type": "object",
       "properties": {
@@ -37,6 +57,13 @@
       },
       "additionalProperties": true
     },
+    "escalation_reviewer": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "escalation_reason": { "type": "string" },
+    "escalation_actor_id": { "type": "string" },
+    "information_received_at": { "type": "string" },
     "packet_snapshot": { "type": "object" }
   },
   "additionalProperties": true

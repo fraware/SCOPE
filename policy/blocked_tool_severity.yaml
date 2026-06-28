@@ -1,4 +1,4 @@
-version: scope-core-v0.6
+version: scope-core-v0.7
 high_severity:
   - robot_queue.submit
   - protocol_editor.update_active_protocol

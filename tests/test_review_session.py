@@ -80,6 +80,15 @@ def test_two_valid_reviews_grant():
     )
     grant = engine.issue_grant_from_session(session, packet, [d1, d2])
     assert grant["authorization"]["approved_scope"] == "single_validation_plan"
+    assert grant["provenance"]["authority_checks"] == d1["provenance"]["authority_checks"]
+    assert (
+        grant["provenance"]["identity_assurance_level"]
+        == d1["provenance"]["identity_assurance_level"]
+    )
+    assert (
+        grant["provenance"]["role_resolution_source"]
+        == d1["provenance"]["role_resolution_source"]
+    )
 
 
 def test_conflict_blocks_grant():

@@ -1,26 +1,76 @@
-# SCOPE
+<div align="center">
 
-Home: [https://github.com/fraware/SCOPE](https://github.com/fraware/SCOPE)
+<pre>
+ ███████╗ ██████╗  ██████╗ ██████╗ ███████╗
+ ██╔════╝██╔═══██╗██╔═══██╗██╔══██╗██╔════╝
+ ███████╗██║   ██║██║   ██║██████╔╝█████╗
+ ╚════██║██║   ██║██║   ██║██╔═══╝ ██╔══╝
+ ███████║╚██████╔╝╚██████╔╝██║     ███████╗
+ ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝     ╚══════╝
+</pre>
 
-SCOPE is the Scoped Scientific Authorization Protocol (v0.6.0).
+**Scoped authorization for AI-shaped scientific work**
 
-AKTA can decide that an AI-shaped scientific action requires review or authorization. SCOPE turns that decision into a structured review packet, assigns the right reviewer role, captures a scoped decision, emits a bounded grant, enforces expiration, and produces artifacts that can be verified and packaged.
+[![Version](https://img.shields.io/badge/version-0.7.0-blue)](https://github.com/fraware/SCOPE/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/fraware/SCOPE/actions/workflows/ci.yml/badge.svg)](https://github.com/fraware/SCOPE/actions/workflows/ci.yml)
 
-Review is not a checkbox. Review is a role, artifact, scope, expiration, and accountability trail.
+</div>
+
+Repository: [https://github.com/fraware/SCOPE](https://github.com/fraware/SCOPE)
+
+---
+
+## Why SCOPE exists
+
+When an AI system proposes a scientific action — updating a protocol, submitting to a robot queue, or publishing a claim — someone with the right expertise should review it before tools run. Most systems treat that as a checkbox. SCOPE treats it as a **structured workflow**: who reviewed, what they saw, what scope they approved, when it expires, and what happened at runtime.
+
+SCOPE does **not** certify that an action is safe or correct. It produces auditable artifacts and enforces the scope a qualified reviewer actually approved.
+
+## What SCOPE does
+
+- Builds a **review packet** from upstream signals (what changed, what evidence exists, who should review)
+- Captures a **typed reviewer decision** with rationale, role, and provenance
+- Issues a **bounded grant** — allowed tools, scope, and expiration — tied to that decision
+- **Enforces grants at runtime** and records violations, revocations, and expirations
+- Maintains a **hash-chained ledger** for accountability and quality metrics
+- **Exports** obligations and packaging artifacts for downstream runtimes (PF-Core, PCS)
+
+```mermaid
+flowchart LR
+  A[Upstream signal] --> B[Review packet]
+  B --> C[Reviewer decision]
+  C --> D[Scoped grant]
+  D --> E[Runtime enforcement]
+  E --> F[Ledger and exports]
+```
+
+> **Review is not a checkbox.** Review is a role, an artifact, a scope, an expiration, and an accountability trail.
+
+---
 
 ## Quick start
 
+Under two minutes from clone to a working review:
+
 ```bash
+git clone https://github.com/fraware/SCOPE.git
+cd SCOPE
 pip install -e ".[dev]"
 pytest
-python evals/run_review_cases.py
 ```
 
-## CLI
+Run the bundled evaluation scenarios (8 core; add `--extended` for 13 more, 21 total):
 
-### AKTA review (one-shot)
+```bash
+python evals/run_review_cases.py
+python evals/run_review_cases.py --extended
+```
 
-Primary AKTA integration path — packet, decision, grant, and summary in one command:
+### AKTA one-shot review
+
+The primary integration path when [AKTA](docs/akta_integration.md) flags an action for review: one command produces the packet, decision, grant, and summary.
 
 ```bash
 scope akta review \
@@ -29,234 +79,207 @@ scope akta review \
   --grant-scope protocol_draft \
   --reviewer examples/protocol_drift/reviewer_protocol_owner.json \
   --decision-rationale "Narrow protocol draft approval only." \
-  --out-dir /tmp/akta_review_out
+  --out-dir ./out/akta_review
 ```
 
-Writes `scope_review_packet.json`, `scope_decision.json`, `scope_grant.json`, and `summary.json` to `--out-dir`.
+Outputs in `./out/akta_review/`:
 
-In production mode, also pass `--signing-key` (Ed25519 private key PEM) so the decision is signed before grant issue.
+| File | Purpose |
+|------|---------|
+| `scope_review_packet.json` | Artifacts and context for the reviewer |
+| `scope_decision.json` | Structured approval with rationale |
+| `scope_grant.json` | Runtime authorization bound to the decision |
+| `summary.json` | One-line status for automation |
 
-### Packet workflow
+Full contract: [docs/akta_review_contract.md](docs/akta_review_contract.md). End-to-end demo: [docs/akta_scope_demo.md](docs/akta_scope_demo.md).
+
+---
+
+## Core workflows
+
+### Review a request
+
+Build and validate a packet from AKTA inputs, optionally enriched with a VSA scientific report:
 
 ```bash
-scope packet create --akta-record examples/protocol_change_review/akta_record.json \
+scope packet create \
+  --akta-record examples/protocol_change_review/akta_record.json \
   --akta-trigger examples/protocol_change_review/review_trigger.json \
-  --vsa-report adapters/vsa/examples/scientific_report_example.json \
-  --out /tmp/packet.json
+  --out ./out/packet.json
 
-scope packet validate /tmp/packet.json
-
-scope packet render /tmp/packet.json --format markdown --out /tmp/packet.md
+scope packet validate ./out/packet.json
+scope packet render ./out/packet.json --format markdown --out ./out/packet.md
 ```
 
-### Decision and grant
+For multi-reviewer cases, use review sessions (`scope review session …`) or the review queue (`scope review queue …`). See [docs/reviewer_guide.md](docs/reviewer_guide.md).
+
+### Issue a grant
+
+Submit a reviewer decision, then issue a grant from the approved scope:
 
 ```bash
-scope decision submit --packet /tmp/packet.json \
+scope decision submit \
+  --packet ./out/packet.json \
   --reviewer examples/protocol_change_review/reviewer_protocol_owner.json \
   --decision examples/protocol_change_review/decision.json \
-  --out /tmp/decision.json
+  --out ./out/decision.json
 
-scope grant issue --packet /tmp/packet.json --decision /tmp/decision.json --out /tmp/grant.json
+scope grant issue \
+  --packet ./out/packet.json \
+  --decision ./out/decision.json \
+  --out ./out/grant.json
+```
 
-scope grant check --grant /tmp/grant.json --requested-tool robot_queue.submit \
+In production deployments, decisions must be cryptographically signed before grant issue. See [docs/trusted_boundary.md](docs/trusted_boundary.md) and [docs/key_management.md](docs/key_management.md).
+
+### Check authorization at runtime
+
+Before a tool executes, verify the grant still allows the requested action:
+
+```bash
+scope grant check \
+  --grant ./out/grant.json \
+  --requested-tool robot_queue.submit \
   --context examples/protocol_change_review/current_context.json \
-  --ledger /tmp/scope_events.jsonl
-
-scope grant revoke --grant-id SCOPE-GRANT-XXXXXX --ledger /tmp/scope_events.jsonl
-
-scope grant status --grant-id SCOPE-GRANT-XXXXXX --ledger /tmp/scope_events.jsonl
+  --ledger ./out/scope_events.jsonl
 ```
 
-### Multi-reviewer sessions (A6 and similar)
+Returns `ALLOWED` or `BLOCKED`. Revoke or inspect status via `scope grant revoke` and `scope grant status`.
+
+> For the complete CLI surface (export, quality, identity, policy overlays), run `scope --help` or see [docs/scoped_scientific_authorization.md](docs/scoped_scientific_authorization.md).
+
+---
+
+## Ecosystem
+
+| Component | Role |
+|-----------|------|
+| **AKTA** | Classifies whether a scientific action needs review or authorization |
+| **SCOPE** | Runs the review workflow and issues scoped grants |
+| **PF-Core** | Runtime obligation verification from grant exports |
+| **PCS** | Release packaging from packet, decision, and grant artifacts |
+| **VSA** | Optional scientific report enrichment for review packets |
+
+Integration field mappings: [docs/external_integration_contracts.md](docs/external_integration_contracts.md). Optional REST API: install with `pip install -e ".[rest]"` and run `uvicorn adapters.generic_rest.server:app`.
+
+Institutional pilots: start with [docs/institutional_pilot_guide.md](docs/institutional_pilot_guide.md) and sample fixtures in [examples/institutional_pilot/](examples/institutional_pilot/).
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [scoped_scientific_authorization.md](docs/scoped_scientific_authorization.md) | Protocol overview and doc index |
+| [akta_review_contract.md](docs/akta_review_contract.md) | Frozen `scope akta review` output contract |
+| [akta_integration.md](docs/akta_integration.md) | AKTA adapter and trigger mapping |
+| [akta_scope_demo.md](docs/akta_scope_demo.md) | Full AKTA → SCOPE → PF → PCS walkthrough |
+| [reviewer_guide.md](docs/reviewer_guide.md) | Reviewer role guidance |
+| [review_doctrine.md](docs/review_doctrine.md) | Review principles and accountability |
+| [institutional_pilot_guide.md](docs/institutional_pilot_guide.md) | Pilot workshop and lab checklist |
+| [institutional_guide.md](docs/institutional_guide.md) | Institutional deployment overview |
+| [trusted_boundary.md](docs/trusted_boundary.md) | Trust assumptions and production mode |
+| [limitations.md](docs/limitations.md) | In-repo vs external boundaries |
+| [identity_assurance.md](docs/identity_assurance.md) | Reviewer identity provenance |
+| [signing_assurance.md](docs/signing_assurance.md) | Decision and grant signing provenance |
+| [rbac_scope_authority.md](docs/rbac_scope_authority.md) | Org RBAC and scope policy checks |
+| [key_management.md](docs/key_management.md) | Key registry and signing providers |
+| [quality_metrics.md](docs/quality_metrics.md) | Ledger-backed review quality metrics |
+| [threat_model.md](docs/threat_model.md) | Threats addressed and residual risk |
+| [external_integration_contracts.md](docs/external_integration_contracts.md) | Cross-repo field mappings |
+| [pf_core_bridge.md](docs/pf_core_bridge.md) | PF-Core obligation export |
+| [pcs_export.md](docs/pcs_export.md) | PCS bundle export |
+| [evidence_vocab_mapping.md](docs/evidence_vocab_mapping.md) | Evidence vocabulary alignment |
+| [field_thesis.md](docs/field_thesis.md) | Design rationale |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+
+---
+
+## Contributing
+
+Contributions are welcome — bug reports, docs improvements, adapters, and test coverage all help.
+
+1. **Open an issue** to discuss larger changes: [GitHub Issues](https://github.com/fraware/SCOPE/issues)
+2. **Fork, branch, and open a PR**: [GitHub Pull Requests](https://github.com/fraware/SCOPE/pulls)
+3. **Run the same checks as CI** before submitting:
 
 ```bash
-scope review session create --packet /tmp/packet.json --out /tmp/session.json \
-  --session-store json --session-dir /tmp/sessions
+# Linux / macOS
+bash scripts/ci.sh
 
-scope review session vote --session /tmp/session.json --packet /tmp/packet.json \
-  --reviewer examples/reviewer_domain_scientist.json \
-  --decision examples/decision_ds.json --out /tmp/decision_ds.json \
-  --session-store json --session-dir /tmp/sessions
-
-scope review session vote --session /tmp/session.json --packet /tmp/packet.json \
-  --reviewer examples/reviewer_protocol_owner.json \
-  --decision examples/decision_po.json --out /tmp/decision_po.json \
-  --session-store json --session-dir /tmp/sessions
-
-scope review session issue-grant --session /tmp/session.json --packet /tmp/packet.json \
-  --decision /tmp/decision_ds.json --decision /tmp/decision_po.json --out /tmp/grant.json \
-  --session-store json --session-dir /tmp/sessions
-
-scope review session status --session-id SCOPE-SESS-XXXXXX --packet /tmp/packet.json \
-  --session-store json --session-dir /tmp/sessions
+# Windows
+.\scripts\ci.ps1
 ```
 
-Session backends: `memory` (default), `json`, `sqlite`. Use `--session-dir` for persistence path.
+CI runs on Python 3.10, 3.11, and 3.12: `ruff` lint, `mypy` typecheck, `pytest`, and all 21 evaluation scenarios with `--extended`.
 
-Review lifecycle ledger events:
+Individual commands:
 
 ```bash
-scope review open --packet-id SCOPE-PKT-XXXXXX --actor-id reviewer-1 --ledger /tmp/scope_events.jsonl
-
-scope review view-artifact --packet-id SCOPE-PKT-XXXXXX --artifact protocol_diff_ref \
-  --actor-id reviewer-1 --ledger /tmp/scope_events.jsonl
+pip install -e ".[dev]"
+ruff check scope tests evals adapters
+mypy scope
+pytest
+python evals/run_review_cases.py --extended
 ```
 
-Quorum modes (`require_all`, `require_any`, `n_of_m`, `statistical_co_review`) and
-`safety_veto_roles` are configured via optional `--quorum-policy` on session create.
+### Repository layout
 
-### Signing and production mode
+| Path | Contents |
+|------|----------|
+| `scope/` | Core protocol engine and CLI |
+| `schemas/` | JSON schemas for artifacts |
+| `policy/` | YAML policy bundles and domain overlays |
+| `adapters/` | AKTA, VSA, PF-Core, PCS, and REST integrations |
+| `examples/` | Scenario fixtures for docs and evals |
+| `evals/` | 8 core + 13 extended evaluation scenarios |
+| `tests/` | Pytest suite |
+| `docs/` | Protocol and integration documentation |
 
-Production mode requires a signed decision before grant issue. Decisions may be submitted unsigned, then signed:
-
-```bash
-export SCOPE_PRODUCTION_MODE=true
-
-scope decision submit --packet /tmp/packet.json --reviewer reviewer.json \
-  --decision decision.json --out /tmp/decision.json
-
-scope decision sign --decision /tmp/decision.json --key keys/reviewer.pem --out /tmp/signed_decision.json
-scope decision validate --require-signature /tmp/signed_decision.json
-
-scope grant issue --packet /tmp/packet.json --decision /tmp/signed_decision.json --out /tmp/grant.json
-scope grant sign --grant /tmp/grant.json --key keys/reviewer.pem --out /tmp/signed_grant.json
-scope verify --artifact /tmp/signed_decision.json --public-key keys/reviewer.pub --type decision
-```
-
-Use `--public-key` for verification without private key access. `--key` remains for dev signing only.
-
-See [docs/trusted_boundary.md](docs/trusted_boundary.md) for trust assumptions.
-
-### Export and quality
-
-```bash
-scope export pf --grant /tmp/grant.json --out /tmp/pf_obligation.json --validate --live
-
-scope export pcs --packet /tmp/packet.json --decision /tmp/decision.json \
-  --grant /tmp/grant.json --out /tmp/pcs_bundle --validate --live
-
-scope quality report --ledger /tmp/scope_events.jsonl --out /tmp/quality_report.json \
-  --queue-dir .scope/queues
-```
-
-Set `PF_CORE_REPO_PATH` or `PCS_CORE_REPO_PATH` to sibling repo roots for optional live contract validation (`--live`). When unset, validation skips with an explicit message.
-
-### Review queue
-
-```bash
-scope review queue create --packet /tmp/packet.json --out /tmp/queue.json \
-  --queue-dir .scope/queues
-
-scope review queue assign --queue /tmp/queue.json \
-  --reviewer examples/protocol_change_review/reviewer_protocol_owner.json
-
-scope review queue status --queue-dir .scope/queues
-
-scope review queue list --queue-dir .scope/queues
-
-scope review queue decide --queue /tmp/queue.json --decision-id SCOPE-DEC-XXXXXX
-
-scope review queue grant --queue /tmp/queue.json --grant-id SCOPE-GRANT-XXXXXX
-
-scope review queue close --queue /tmp/queue.json --reason withdrawn
-```
-
-### Key registry
-
-```bash
-scope key register --reviewer-id protocol_owner_1 \
-  --public-key keys/reviewer.pub
-
-scope key list
-
-scope key verify-registry --decision /tmp/signed_decision.json
-```
-
-See [docs/key_management.md](docs/key_management.md).
-
-## REST API
-
-Optional FastAPI server (install with `pip install -e ".[rest]"`):
-
-```bash
-uvicorn adapters.generic_rest.server:app --reload
-```
-
-Set `SCOPE_LEDGER_PATH` for ledger-backed grant check/revoke/status.
-Set `SCOPE_POLICY_DIR` to override the default `policy/` directory (REST key registry).
-Set `SCOPE_SIGNING_KEY` for sign/verify endpoints.
-Set `SCOPE_SESSION_STORE` and `SCOPE_SESSION_DIR` for persistent review sessions (`json` or `sqlite`).
-Set `SCOPE_API_KEY` to require `Authorization: Bearer <key>` on all endpoints except `/v0/health`.
-Set `SCOPE_REVIEW_ROUTE_PROMOTION=true` (default) to promote valid AKTA `review_scope` values to `requested_scope`.
-
-Grant check returns `{allowed, reason, code}` where `code` is `allowed`, `tool_blocked`, `tool_not_allowed`, `grant_expired`, or `grant_revoked`.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/v0/health` | Health check |
-| POST | `/v0/packets` | Create packet |
-| POST | `/v0/packets/validate` | Validate packet |
-| POST | `/v0/packets/render` | Render packet (markdown/html) |
-| POST | `/v0/decisions` | Submit decision |
-| POST | `/v0/decisions/sign` | Sign decision |
-| POST | `/v0/review-sessions` | Create review session |
-| GET | `/v0/review-sessions/{id}` | Session status |
-| POST | `/v0/review-sessions/{id}/votes` | Submit session vote |
-| POST | `/v0/review-sessions/{id}/grants` | Issue grant from session |
-| POST | `/v0/grants` | Issue grant |
-| POST | `/v0/grants/check` | Runtime grant check |
-| POST | `/v0/grants/revoke` | Revoke grant |
-| GET | `/v0/grants/{id}/status` | Grant ledger status |
-| POST | `/v0/grants/sign` | Sign grant |
-| POST | `/v0/verify` | Verify signed artifact |
-| GET | `/v0/review-queue` | List queue entries and metrics |
-| POST | `/v0/review-queue` | Create queue entry |
-| POST | `/v0/review-queue/{id}/assign` | Assign reviewer |
-| POST | `/v0/review-queue/{id}/decide` | Mark decided |
-| POST | `/v0/review-queue/{id}/grant` | Mark granted |
-| POST | `/v0/review-queue/{id}/close` | Close without grant |
-| GET | `/v0/keys` | List key registry |
-| POST | `/v0/keys/register` | Register reviewer public key |
-| POST | `/v0/keys/verify-registry` | Verify decision against registry |
-| POST | `/v0/akta/review` | AKTA one-shot review (packet → decision → grant) |
-| GET | `/v0/quality` | Quality report (`?queue_dir=` optional) |
-| POST | `/v0/export/pf` | PF-Core obligation export |
-| POST | `/v0/export/pf/validate` | Validate PF export |
-| POST | `/v0/export/pcs` | PCS bundle export |
-| POST | `/v0/export/pcs/validate` | Validate PCS export |
-
-Full cross-repo demo: [docs/akta_scope_demo.md](docs/akta_scope_demo.md).
-Integration contracts: [docs/external_integration_contracts.md](docs/external_integration_contracts.md).
-
-## Python API
+### Python API
 
 ```python
 from scope import ScopeEngine
 
 engine = ScopeEngine.from_policy_dir("policy/", ledger_path="logs/scope_events.jsonl")
-packet = engine.create_packet("examples/protocol_change_review/akta_record.json",
-                                "examples/protocol_change_review/review_trigger.json")
-decision = engine.submit_decision(packet, {"reviewer_id": "r1", "role": "protocol_owner"}, {
-    "type": "approve_narrower_scope",
-    "approved_scope": "protocol_draft",
-    "rationale": "Evidence supports validation draft only.",
-})
+packet = engine.create_packet(
+    "examples/protocol_change_review/akta_record.json",
+    "examples/protocol_change_review/review_trigger.json",
+)
+decision = engine.submit_decision(
+    packet,
+    {"reviewer_id": "r1", "role": "protocol_owner"},
+    {
+        "type": "approve_narrower_scope",
+        "approved_scope": "protocol_draft",
+        "rationale": "Evidence supports validation draft only.",
+    },
+)
 grant = engine.issue_grant(packet, decision)
-allowed = engine.check_grant_detailed(grant, "protocol_editor.draft_change", {"protocol_version": "protocol_v3"})
+allowed = engine.check_grant_detailed(
+    grant, "protocol_editor.draft_change", {"protocol_version": "protocol_v3"}
+)
 ```
 
-## Repository layout
+---
 
-- `scope/` - core protocol engine
-- `schemas/` - JSON schemas for artifacts
-- `policy/` - YAML policy files (`scope-core-v0.6`) and domain overlays
-- `adapters/` - AKTA, VSA, PF-Core, PCS, REST integrations
-- `examples/` - scenario fixtures
-- `evals/` - eight core evaluation scenarios (+ four extended with `--extended`)
-- `tests/` - pytest suite
-- `docs/` - protocol documentation
+## For integrators
+
+Technical reference for assurance models, production mode, and cross-repo contracts:
+
+| Topic | Document |
+|-------|----------|
+| Identity assurance levels (IAL0–IAL4) | [identity_assurance.md](docs/identity_assurance.md) |
+| Signing assurance levels (SAL0–SAL4) | [signing_assurance.md](docs/signing_assurance.md) |
+| Two-stage authority checks | [rbac_scope_authority.md](docs/rbac_scope_authority.md) |
+| Production mode and signing | [trusted_boundary.md](docs/trusted_boundary.md) |
+| REST API (`POST /v0/akta/review`, grant check, queue) | [external_integration_contracts.md](docs/external_integration_contracts.md) |
+| PF obligation and PCS manifest formats | [pf_core_bridge.md](docs/pf_core_bridge.md), [pcs_export.md](docs/pcs_export.md) |
+
+Environment variables for production (OIDC identity, ledger delivery, signing keys) are documented in [docs/trusted_boundary.md](docs/trusted_boundary.md) and [docs/institutional_pilot_guide.md](docs/institutional_pilot_guide.md).
+
+---
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

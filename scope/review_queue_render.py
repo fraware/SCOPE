@@ -18,7 +18,15 @@ def render_queue_dashboard(
     rows: list[str] = []
     for entry in status.get("entries", []):
         overdue = entry.get("overdue")
+        escalated = entry.get("escalated")
+        queue_status = str(entry.get("status", ""))
         row_class = "overdue" if overdue else ""
+        if escalated:
+            row_class = f"{row_class} escalated".strip()
+        if queue_status == "needs_information":
+            row_class = f"{row_class} needs_information".strip()
+        if queue_status == "expired":
+            row_class = f"{row_class} expired".strip()
         reviewer = entry.get("reviewer") or {}
         reviewer_label = reviewer.get("reviewer_id", "—")
         rows.append(
@@ -29,9 +37,14 @@ def render_queue_dashboard(
             f"<td>{html.escape(str(entry.get('due_at', '')))}</td>"
             f"<td>{html.escape(str(reviewer_label))}</td>"
             f"<td>{'yes' if overdue else 'no'}</td>"
+            f"<td>{'yes' if escalated else 'no'}</td>"
             f"</tr>"
         )
-    body_rows = "\n".join(rows) if rows else "<tr><td colspan='6'>No queue entries</td></tr>"
+    status_counts = status.get("status_counts") or {}
+    counts_html = ", ".join(
+        f"{html.escape(k)}: {v}" for k, v in sorted(status_counts.items())
+    )
+    body_rows = "\n".join(rows) if rows else "<tr><td colspan='7'>No queue entries</td></tr>"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,6 +56,9 @@ def render_queue_dashboard(
     th, td {{ border: 1px solid #ccc; padding: 0.5rem; text-align: left; }}
     th {{ background: #f5f5f5; }}
     tr.overdue {{ background: #fff3cd; }}
+    tr.escalated {{ background: #f8d7da; }}
+    tr.needs_information {{ background: #cfe2ff; }}
+    tr.expired {{ background: #e2e3e5; }}
     .metrics {{ margin-bottom: 1rem; }}
   </style>
 </head>
@@ -51,6 +67,7 @@ def render_queue_dashboard(
   <div class="metrics">
     <p>Open: {status.get('open_queue_count', 0)} |
        Overdue: {status.get('overdue_queue_count', 0)} |
+       Status counts: {counts_html} |
        Directory: {html.escape(str(status.get('queue_dir', '')))}</p>
   </div>
   <table>
@@ -62,6 +79,7 @@ def render_queue_dashboard(
         <th>Due At</th>
         <th>Reviewer</th>
         <th>Overdue</th>
+        <th>Escalated</th>
       </tr>
     </thead>
     <tbody>

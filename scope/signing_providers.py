@@ -40,6 +40,9 @@ class EnvKeyProvider(SigningProvider):
         key_path = os.environ.get(self.env_var)
         if not key_path:
             raise ScopeValidationError(f"{self.env_var} not set")
+        from scope.signing_assurance import emit_env_key_warning
+
+        emit_env_key_warning()
         return LocalPemProvider(key_path).get_signer(reviewer_id=reviewer_id)
 
 

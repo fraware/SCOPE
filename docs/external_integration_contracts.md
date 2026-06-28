@@ -1,6 +1,8 @@
-# External Integration Contracts (v0.5)
+# External Integration Contracts (v0.7)
 
 Formal field-mapping contracts for AKTA, PF-Core, PCS, and VSA integrations. These contracts define the shapes SCOPE produces or consumes locally; external repositories must implement compatible endpoints or adapters.
+
+Related docs: [akta_review_contract.md](akta_review_contract.md), [pf_core_bridge.md](pf_core_bridge.md), [pcs_export.md](pcs_export.md), [evidence_vocab_mapping.md](evidence_vocab_mapping.md).
 
 ## AKTA import
 
@@ -46,6 +48,21 @@ Golden fixtures:
 | `scientific_context.*` | flat fields or `scientific_context` object |
 
 Evidence vocabulary mapping: [evidence_vocab_mapping.md](evidence_vocab_mapping.md).
+
+## AKTA review output (primary path)
+
+`scope akta review` and `POST /v0/akta/review` emit a frozen output bundle under `out_dir/`:
+
+| File | Description |
+|------|-------------|
+| `scope_review_packet.json` | Review packet |
+| `scope_decision.json` | Decision (signed in production mode) |
+| `scope_grant.json` | Issued grant |
+| `summary.json` | Adapter summary validated against `schemas/scope_akta_review_summary.schema.json` |
+
+Contract version: `scope-akta-review-v0.7`. Required `summary.json` fields include `adapter_contract_version`, `identity_assurance_level`, `signing_assurance_level`, and `production_mode`.
+
+Full contract: [akta_review_contract.md](akta_review_contract.md).
 
 ## VSA import
 
@@ -93,6 +110,8 @@ Example: `adapters/vsa/examples/scientific_report_example.json`.
 
 Contract fixture: `tests/fixtures/contracts/pf_obligation_contract.json`.
 
+See [pf_core_bridge.md](pf_core_bridge.md).
+
 ### Live validation (optional)
 
 When `PF_CORE_REPO_PATH` points to a PF-Core checkout, SCOPE can invoke a documented validator script from that repo:
@@ -135,7 +154,7 @@ Directory containing:
 
 Contract fixture: `tests/fixtures/contracts/pcs_manifest_contract.json`.
 
-Key registry workflow: [key_management.md](key_management.md).
+Key registry workflow: [key_management.md](key_management.md). See [pcs_export.md](pcs_export.md).
 
 ### Live validation (optional)
 
@@ -168,27 +187,33 @@ Resolved at packet create via `scope/review_assignment.py`:
 
 Schema: `schemas/review_assignment.schema.json`.
 
-## Review queue (v0.5)
+## Review queue (v0.7)
 
 File-backed queue entries under `.scope/queues/` (override with `--queue-dir`).
 
 Schema: `schemas/scope_review_queue.schema.json`.
 
-CLI: `scope review queue create|assign|status`.
+Ten-state workflow: `open`, `assigned`, `in_review`, `needs_information`, `escalated`, `decided`, `granted`, `expired`, `closed`, `cancelled`. Grants require `decided → granted`; direct grant from open or in-review states is forbidden.
 
-Quality metrics: `open_queue_count`, `overdue_queue_count`.
+CLI: `scope review queue create|assign|status|list|decide|grant|close` plus transition commands (`in-review`, `needs-information`, etc.).
 
-## Version alignment (v0.5)
+REST: full queue lifecycle under `/v0/review-queue/{id}/...`.
+
+Quality metrics: `open_queue_count`, `overdue_queue_count` (open statuses include `in_review`, `needs_information`, `escalated`).
+
+## Version alignment (v0.7)
 
 | Artifact | Version field | Expected value |
 |----------|---------------|----------------|
-| SCOPE packet | `packet_version` | `0.5.1` |
-| SCOPE grant | `grant_version` | `0.5.1` |
-| Quality report | `report_version` | `0.5` |
-| Review queue | `queue_version` | `0.5.1` |
+| SCOPE package | `pyproject.toml` / `scope/_version.py` | `0.7.0` |
+| SCOPE packet | `packet_version` | `0.7.0` |
+| SCOPE grant | `grant_version` | `0.7.0` |
+| Quality report | `report_version` | `0.7` |
+| Review queue | `queue_version` | `0.7.0` |
+| AKTA review summary | `adapter_contract_version` | `scope-akta-review-v0.7` |
 | PF obligation | `obligation_version` | `pf-core-v0.5` |
 | PCS manifest | `manifest_version` | `pcs-v0.5` |
-| Policy bundle | `version` in YAML | `scope-core-v0.5` |
+| Policy bundle | `version` in YAML | `scope-core-v0.7` |
 
 ## External repo dependencies
 

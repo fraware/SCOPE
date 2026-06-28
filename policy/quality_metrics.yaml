@@ -1,4 +1,4 @@
-version: scope-core-v0.6
+version: scope-core-v0.7
 thresholds:
   rubber_stamp_min_review_seconds: 20
   rubber_stamp_high_risk_count: 10
@@ -126,3 +126,7 @@ metrics:
   post_approval_runtime_violation_rate:
     category: outcome
     v0_4_status: implemented
+  ledger_delivery_failure_count:
+    category: outcome
+    description: Ledger events with failed or spooled remote delivery state.
+    v0_7_status: implemented
