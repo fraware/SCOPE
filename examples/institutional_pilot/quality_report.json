@@ -1,0 +1,51 @@
+{
+  "by_action_type": {
+    "A5_protocol_modification": {
+      "decisions": 1,
+      "stale_grant_attempts": 0
+    }
+  },
+  "by_reviewer": {
+    "reviewer_protocol_owner_drift": {
+      "decisions": 1,
+      "fast_approvals": 0
+    }
+  },
+  "by_role": {
+    "protocol_owner": {
+      "decisions": 1
+    }
+  },
+  "event_counts": {
+    "decision_submitted": 1,
+    "grant_issued": 1,
+    "packet_created": 1
+  },
+  "metrics": {
+    "abstention_rate": 0.0,
+    "approval_rate": 1.0,
+    "approval_under_minimum_review_time": 0.0,
+    "approval_without_comment_rate": 0.0,
+    "escalation_rate": 0.0,
+    "expired_grant_attempt_rate": 0.0,
+    "grant_revoked_count": 0,
+    "grant_use_count": 0,
+    "narrowed_scope_rate": 1.0,
+    "rejection_rate": 0.0,
+    "request_more_evidence_rate": 0.0,
+    "review_turnaround_time": null,
+    "reviewer_confidence_mean": 0.5,
+    "scope_overbreadth_rate": 0.0,
+    "scope_violation_attempt_rate": 0.0,
+    "stale_grant_rate": 0.0
+  },
+  "policy_version": "scope-core-v0.4",
+  "report_version": "0.4",
+  "summary": {
+    "grant_use_count": 0,
+    "total_decisions": 1,
+    "total_grants": 1,
+    "total_warnings": 0
+  },
+  "warnings": []
+}
