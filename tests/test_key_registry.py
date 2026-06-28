@@ -175,7 +175,7 @@ def test_key_list_registry(tmp_path):
 
     summary = verify_registry_integrity(policy_copy)
     assert summary["reviewer_count"] == 1
-    assert summary["registry_version"] == "scope-core-v0.6"
+    assert summary["registry_version"] == "scope-core-v0.7"
 
 
 def test_pcs_export_includes_registry_metadata(tmp_path):
