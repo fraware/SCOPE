@@ -1,0 +1,19 @@
+{
+  "record_id": "AKTA-SAR-DRIFT-001",
+  "requested_transition": {
+    "requested_action": "update_active_protocol",
+    "requested_tool": "protocol_editor.update_active_protocol"
+  },
+  "classification": {
+    "scientific_action_type": "A5_protocol_modification",
+    "responsibility_level": "R4_methodological_modification",
+    "evidence_state": "E2_preliminary_signal",
+    "validation_status": "V1_literature_supported",
+    "verification_status": "Q0_unchecked"
+  },
+  "decision": {
+    "admissibility": "review_required",
+    "blocked_tools": ["robot_queue.submit"],
+    "next_admissible_steps": ["approve protocol draft for validation review"]
+  }
+}
