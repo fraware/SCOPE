@@ -11,6 +11,7 @@ from typing import Any, cast
 
 import jsonschema
 
+from adapters.akta.evidence_vocab import apply_evidence_normalization
 from adapters.akta.field_extraction import merge_akta_inputs
 from scope.config import review_route_promotion_enabled
 from scope.errors import SchemaValidationError
@@ -166,6 +167,8 @@ class PacketBuilder:
             unknown_defaults = (None, "E0_unknown", "V0_unknown", "Q0_unchecked")
             if merged.get(key) and scientific_context.get(field) in unknown_defaults:
                 scientific_context[field] = merged[key]
+
+        scientific_context = apply_evidence_normalization(scientific_context)
 
         akta_constraints = {
             "blocked_tools": merged.get("blocked_tools") or [],
