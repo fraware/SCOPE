@@ -1,4 +1,4 @@
-version: scope-core-v0.2
+version: scope-core-v0.4
 matrix:
   A3_evidence_interpretation_consequential:
     required_roles:
@@ -24,10 +24,13 @@ matrix:
   A8_tool_or_workflow_mutation:
     required_roles:
       - system_owner
+      - domain_scientist
+    require_all: true
   A9_execution_adjacent_or_external_action:
     required_roles:
       - system_owner
       - lab_operations_lead
+      - domain_scientist
     require_all: true
   A10_publication_or_claim_escalation:
     required_roles:
