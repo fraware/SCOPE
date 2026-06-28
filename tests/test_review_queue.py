@@ -81,7 +81,8 @@ def test_review_queue_status_transitions(tmp_path):
     assert entry.status == "open"
 
     engine.assign_review_queue(out, {"reviewer_id": "rev1", "role": "protocol_owner"})
-    assert ReviewQueue.load(out).status == "assigned"
+    engine.in_review_review_queue(out)
+    assert ReviewQueue.load(out).status == "in_review"
 
     engine.decide_review_queue(out, "SCOPE-DEC-TEST01")
     decided = ReviewQueue.load(out)
