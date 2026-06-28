@@ -19,9 +19,14 @@ def render_queue_dashboard(
     for entry in status.get("entries", []):
         overdue = entry.get("overdue")
         escalated = entry.get("escalated")
+        queue_status = str(entry.get("status", ""))
         row_class = "overdue" if overdue else ""
         if escalated:
             row_class = f"{row_class} escalated".strip()
+        if queue_status == "needs_information":
+            row_class = f"{row_class} needs_information".strip()
+        if queue_status == "expired":
+            row_class = f"{row_class} expired".strip()
         reviewer = entry.get("reviewer") or {}
         reviewer_label = reviewer.get("reviewer_id", "—")
         rows.append(
@@ -52,6 +57,8 @@ def render_queue_dashboard(
     th {{ background: #f5f5f5; }}
     tr.overdue {{ background: #fff3cd; }}
     tr.escalated {{ background: #f8d7da; }}
+    tr.needs_information {{ background: #cfe2ff; }}
+    tr.expired {{ background: #e2e3e5; }}
     .metrics {{ margin-bottom: 1rem; }}
   </style>
 </head>
