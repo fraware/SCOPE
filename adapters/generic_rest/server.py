@@ -4,21 +4,25 @@ from __future__ import annotations
 
 import os
 import tempfile
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
-from scope import ScopeEngine, create_session_store
+from scope import ScopeEngine
 from scope._version import __version__
 from scope.config import api_key
+from scope.engine_factory import EngineFactory
 from scope.errors import GrantValidationError, ScopeValidationError
 from scope.render import render_html, render_markdown
 from scope.signing import Ed25519PublicVerifier, Ed25519Signer
 
 app = FastAPI(title="SCOPE REST API", version=__version__)
+_engine_factory = EngineFactory()
 _engine: ScopeEngine | None = None
+_request_context: ContextVar[Request | None] = ContextVar("scope_request", default=None)
 _SCHEMAS_DIR = Path(__file__).resolve().parents[2] / "schemas"
 
 
@@ -32,19 +36,30 @@ def _require_api_key(request: Request) -> None:
     raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
-def get_engine() -> ScopeEngine:
+def get_engine(request: Request | None = None) -> ScopeEngine:
     global _engine
+    active = request or _request_context.get()
+    if active is not None:
+        return _engine_factory.from_headers(dict(active.headers))
     if _engine is None:
-        policy_env = os.environ.get("SCOPE_POLICY_DIR")
-        policy = Path(policy_env) if policy_env else Path(__file__).resolve().parents[2] / "policy"
-        ledger = os.environ.get("SCOPE_LEDGER_PATH")
-        store_type = os.environ.get("SCOPE_SESSION_STORE", "memory")
-        session_dir = os.environ.get("SCOPE_SESSION_DIR")
-        session_store = create_session_store(store_type, session_dir)
-        _engine = ScopeEngine.from_policy_dir(
-            policy, ledger_path=ledger, session_store=session_store
-        )
+        _engine = _engine_factory.default_engine()
     return _engine
+
+
+def reset_engine_cache() -> None:
+    """Clear cached engines (for tests)."""
+    global _engine
+    _engine = None
+    _engine_factory.clear_cache()
+
+
+@app.middleware("http")
+async def _scope_request_context(request: Request, call_next):  # type: ignore[no-untyped-def]
+    token = _request_context.set(request)
+    try:
+        return await call_next(request)
+    finally:
+        _request_context.reset(token)
 
 
 def _signer_from_env(explicit: str | None = None) -> Ed25519Signer:
@@ -131,6 +146,23 @@ class ReviewQueueCreateRequest(BaseModel):
     packet: dict[str, Any]
     sla_hours: int = 72
     queue_dir: str | None = None
+    auto_assign: bool = False
+
+
+class LedgerViolationRequest(BaseModel):
+    grant_id: str
+    tool: str
+    reason: str
+
+
+class LedgerExpirationRequest(BaseModel):
+    grant_id: str
+    reason: str
+    packet_id: str | None = None
+
+
+class IdentityVerifyRequest(BaseModel):
+    token: str
 
 
 class ReviewQueueAssignRequest(BaseModel):
@@ -152,11 +184,20 @@ class ReviewQueueCloseRequest(BaseModel):
 class KeyRegisterRequest(BaseModel):
     reviewer_id: str
     public_key_path: str
-    private_key_path: str | None = None
 
 
 class KeyVerifyRegistryRequest(BaseModel):
     decision: dict[str, Any]
+
+
+class AktaReviewRequest(BaseModel):
+    akta_record: dict[str, Any]
+    akta_trigger: dict[str, Any]
+    grant_scope: str
+    reviewer: dict[str, Any]
+    decision_rationale: str
+    out_dir: str | None = None
+    signing_key_path: str | None = None
 
 
 def _http_error(exc: Exception) -> HTTPException:
@@ -311,8 +352,33 @@ def verify_artifact(req: VerifyRequest) -> dict[str, bool]:
 
 
 @app.get("/v0/quality", dependencies=[Depends(_require_api_key)])
-def quality() -> dict[str, Any]:
-    return get_engine().quality_report()
+def quality(queue_dir: str | None = None) -> dict[str, Any]:
+    return get_engine().quality_report(queue_dir=queue_dir)
+
+
+@app.post("/v0/akta/review", dependencies=[Depends(_require_api_key)])
+def akta_review(req: AktaReviewRequest) -> dict[str, Any]:
+    from scope.akta_review import run_akta_review
+
+    try:
+        out_dir = req.out_dir
+        if not out_dir:
+            out_dir = tempfile.mkdtemp(prefix="scope-akta-review-")
+        summary = run_akta_review(
+            get_engine(),
+            akta_record=req.akta_record,
+            akta_trigger=req.akta_trigger,
+            grant_scope=req.grant_scope,
+            reviewer=req.reviewer,
+            decision_rationale=req.decision_rationale,
+            out_dir=out_dir,
+            signing_key=req.signing_key_path,
+        )
+        return summary
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _http_error(exc) from exc
 
 
 @app.post("/v0/review-queue", dependencies=[Depends(_require_api_key)])
@@ -322,6 +388,7 @@ def create_review_queue(req: ReviewQueueCreateRequest) -> dict[str, Any]:
         req.packet,
         queue_dir=req.queue_dir,
         sla_hours=req.sla_hours,
+        auto_assign=req.auto_assign,
     )
     return entry.status_summary()
 
@@ -413,7 +480,6 @@ def register_key(req: KeyRegisterRequest) -> dict[str, Any]:
             _policy_dir(),
             req.reviewer_id,
             req.public_key_path,
-            private_key_path=req.private_key_path,
         )
         global _engine
         _engine = None
@@ -491,3 +557,36 @@ def validate_pcs_export_endpoint(body: dict[str, Any]) -> dict[str, str]:
     schema = _SCHEMAS_DIR / "pcs_scope_artifact.schema.json"
     validate_pcs_export(tmp, schema if schema.exists() else None)
     return {"status": "valid", "path": str(tmp)}
+
+
+@app.post("/v0/ledger/violations", dependencies=[Depends(_require_api_key)])
+def record_ledger_violation(req: LedgerViolationRequest) -> dict[str, Any]:
+    return get_engine().record_runtime_violation(
+        req.grant_id, tool=req.tool, reason=req.reason
+    )
+
+
+@app.post("/v0/ledger/expiration", dependencies=[Depends(_require_api_key)])
+def record_ledger_expiration(req: LedgerExpirationRequest) -> dict[str, Any]:
+    return get_engine().record_grant_expiration(
+        req.grant_id, reason=req.reason, packet_id=req.packet_id
+    )
+
+
+@app.post("/v0/identity/verify-token", dependencies=[Depends(_require_api_key)])
+def verify_identity_token(req: IdentityVerifyRequest) -> dict[str, Any]:
+    from scope.identity import verify_token_from_env
+
+    identity = verify_token_from_env(req.token, policy_dir=_policy_dir())
+    return {
+        "reviewer_id": identity.reviewer_id,
+        "role": identity.role,
+    }
+
+
+@app.post("/v0/review-queue/escalate", dependencies=[Depends(_require_api_key)])
+def escalate_review_queue(
+    queue_dir: str | None = None,
+    dry_run: bool = False,
+) -> list[dict[str, Any]]:
+    return get_engine().escalate_review_queues(queue_dir=queue_dir, dry_run=dry_run)
