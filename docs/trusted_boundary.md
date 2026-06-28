@@ -1,16 +1,17 @@
 # Trusted Boundary
 
-SCOPE v0.3 assumes:
+SCOPE v0.7 assumes:
 
-- Reviewer identity is provided by a trusted caller or configured registry
-- Reviewer role assignments are correctly configured in policy YAML
+- Reviewer identity is provided by a trusted caller, OIDC/JWT verification, or configured registry
+- Reviewer role assignments are correctly configured in policy YAML and, when enabled, `org_rbac.yaml`
 - Artifacts in packets are authentic or hash-addressed
 - Runtime systems enforce grants or pass them to PF-Core
 - AKTA Records are valid and schema-checked
-- When `SCOPE_PRODUCTION_MODE` is enabled, signing keys are held by authorized reviewers
+- When `SCOPE_PRODUCTION_MODE` is enabled, signing keys are held by authorized reviewers and meet minimum signing assurance (SAL) for the approved scope
 - Session stores (JSON/SQLite) are protected at the filesystem level
+- Ledger delivery mode matches institutional risk tolerance (`SCOPE_LEDGER_DELIVERY_MODE`)
 
-SCOPE v0.3 does not guarantee reviewer competence, honesty, scientific truth, domain safety, legal compliance, or physical lab safety.
+SCOPE v0.7 does not guarantee reviewer competence, honesty, scientific truth, domain safety, legal compliance, or physical lab safety.
 
 ## Production mode and signing
 
@@ -20,7 +21,7 @@ Set `SCOPE_PRODUCTION_MODE=true` (or `1`, `yes`, `production`) to enforce fail-c
 |-------|-------------|
 | Decision submit | Signature optional; unsigned decisions marked `signature_required=true` |
 | Decision validate | Use `--require-signature` to enforce signature presence |
-| Grant issue | Source decision must carry a valid `decision_signature` |
+| Grant issue | Source decision must carry a valid `decision_signature`; minimum SAL enforced per scope |
 | Grant sign | Optional; copies signature metadata from decision when present |
 | Verify | Use `--public-key` for verification without private key access |
 
@@ -36,7 +37,38 @@ scope verify --artifact signed_decision.json --public-key reviewer.pub --type de
 
 Grant issue validates the **decision** signature, not the grant signature. Grant signing is a separate step for downstream verification, PF/PCS export, and institutional audit trails.
 
+Signing assurance levels (SAL0–SAL4) are recorded on grant provenance. See [signing_assurance.md](signing_assurance.md) and [key_management.md](key_management.md).
+
 REST sign/verify endpoints accept `SCOPE_SIGNING_KEY` (private) or `public_key_path` in verify requests.
+
+## Identity assurance (IAL)
+
+Identity assurance levels (IAL0–IAL4) record how reviewer identity was established. Caller JSON alone is IAL0; OIDC plus org RBAC can reach IAL3/IAL4. Two-stage authority checks (`authority_checks` provenance) distinguish skipped RBAC from failed checks.
+
+| Variable | Purpose |
+|----------|---------|
+| `SCOPE_OIDC_ENABLED` | Enable REST middleware identity binding |
+| `SCOPE_OIDC_JWKS_URL` | JWKS endpoint for RS256 verification |
+| `SCOPE_OIDC_ISSUER` | Expected JWT `iss` claim |
+| `SCOPE_OIDC_AUDIENCE` | Expected JWT `aud` claim |
+| `SCOPE_OIDC_PUBLIC_KEY_PEM` | Static PEM alternative to JWKS |
+| `SCOPE_ENFORCE_RBAC` | Require org RBAC on decision submit (also triggered at IAL3/IAL4) |
+
+Claim mapping is configured in `policy/identity_mapping.yaml`. CLI: `scope identity verify-token --token ...`
+
+See [identity_assurance.md](identity_assurance.md) and [rbac_scope_authority.md](rbac_scope_authority.md).
+
+## Ledger delivery
+
+Remote ledger append supports three delivery modes via `SCOPE_LEDGER_DELIVERY_MODE`:
+
+| Mode | Behavior |
+|------|----------|
+| `best_effort` | Append to remote sink without blocking grant issue (default) |
+| `at_least_once` | Spool failed remote deliveries for retry |
+| `fail_closed` | Block high-risk grant issuance when remote delivery fails |
+
+Authoritative tamper evidence remains the local hash-chained JSONL ledger. See [limitations.md](limitations.md).
 
 ## Multi-reviewer sessions
 
@@ -45,7 +77,7 @@ Review sessions collect votes from required roles before grant issuance. Safety 
 Session persistence is configurable:
 
 | Backend | CLI | Environment |
-|---------|-----|---------------|
+|---------|-----|-------------|
 | memory | `--session-store memory` (default) | `SCOPE_SESSION_STORE=memory` |
 | JSON files | `--session-store json --session-dir .scope/sessions` | `SCOPE_SESSION_STORE=json` |
 | SQLite | `--session-store sqlite --session-dir .scope/sessions.db` | `SCOPE_SESSION_STORE=sqlite` |
@@ -56,21 +88,7 @@ Duplicate votes from the same reviewer are rejected. Votes are recorded in both 
 
 Active policy is tagged `scope-core-v0.7`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
 
-## Identity (v0.6)
-
-Optional OIDC/JWT verification binds bearer tokens to reviewer identity:
-
-| Variable | Purpose |
-|----------|---------|
-| `SCOPE_OIDC_ENABLED` | Enable REST middleware identity binding |
-| `SCOPE_OIDC_JWKS_URL` | JWKS endpoint for RS256 verification |
-| `SCOPE_OIDC_ISSUER` | Expected JWT `iss` claim |
-| `SCOPE_OIDC_AUDIENCE` | Expected JWT `aud` claim |
-| `SCOPE_OIDC_PUBLIC_KEY_PEM` | Static PEM alternative to JWKS |
-
-Claim mapping is configured in `policy/identity_mapping.yaml`. CLI: `scope identity verify-token --token ...`
-
-## Trust root (v0.6)
+## Trust root
 
 Signed decisions and grants carry provenance hashes:
 
