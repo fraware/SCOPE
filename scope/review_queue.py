@@ -144,6 +144,17 @@ class ReviewQueue:
         self._data["in_review_at"] = _utc_now()
         self.validate()
 
+    def mark_information_received(self) -> None:
+        """Transition needs_information -> in_review after requested information arrives."""
+        if self.status != "needs_information":
+            raise ScopeValidationError(
+                f"Cannot mark information_received from status {self.status}; "
+                "expected needs_information"
+            )
+        self._transition("in_review")
+        self._data["information_received_at"] = _utc_now()
+        self.validate()
+
     def mark_needs_information(self, *, reason: str = "") -> None:
         self._transition("needs_information")
         self._data["needs_information_at"] = _utc_now()
@@ -151,10 +162,20 @@ class ReviewQueue:
             self._data["needs_information_reason"] = reason
         self.validate()
 
-    def mark_escalated(self, escalation_reviewer: dict[str, Any] | None = None) -> None:
+    def mark_escalated(
+        self,
+        escalation_reviewer: dict[str, Any] | None = None,
+        *,
+        reason: str = "",
+        actor_id: str | None = None,
+    ) -> None:
         self._transition("escalated")
         self._data["escalated_at"] = _utc_now()
         self._data["escalated"] = True
+        if reason:
+            self._data["escalation_reason"] = reason
+        if actor_id:
+            self._data["escalation_actor_id"] = str(actor_id)
         if escalation_reviewer:
             self._data["escalation_reviewer"] = dict(escalation_reviewer)
         self.validate()
@@ -256,6 +277,9 @@ class ReviewQueue:
             "overdue": self.is_overdue(),
             "reviewer": self._data.get("reviewer"),
             "escalation_reviewer": self._data.get("escalation_reviewer"),
+            "escalation_reason": self._data.get("escalation_reason"),
+            "escalation_actor_id": self._data.get("escalation_actor_id"),
+            "information_received_at": self._data.get("information_received_at"),
             "decision_id": self._data.get("decision_id"),
             "grant_id": self._data.get("grant_id"),
             "escalated": self._data.get("escalated", False),
