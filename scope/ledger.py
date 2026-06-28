@@ -10,7 +10,12 @@ from typing import Any
 
 from scope.errors import LedgerError
 from scope.hash import attach_hash, verify_hash
-from scope.ledger_sinks import LedgerSink, LocalJsonlSink, MultiSink, build_ledger_sinks
+from scope.ledger_sinks import (
+    DeliveringSink,
+    LedgerDeliveryError,
+    build_delivering_sink,
+    is_high_risk_ledger_event,
+)
 
 
 def _utc_now() -> str:
@@ -30,18 +35,20 @@ class ScopeLedger:
         self,
         path: str | Path | None = None,
         *,
-        sinks: list[LedgerSink] | None = None,
+        delivering_sink: DeliveringSink | None = None,
     ) -> None:
         self.path = Path(path) if path else None
         self._events: list[dict[str, Any]] = []
-        if sinks is not None:
-            self._sinks = sinks
+        self._delivery_failures = 0
+        self._delivering: DeliveringSink | None = None
+        if delivering_sink is not None:
+            self._delivering = delivering_sink
         elif self.path:
-            self._sinks = build_ledger_sinks(self.path)
-        else:
-            self._sinks = []
+            self._delivering = build_delivering_sink(self.path)
         if self.path and self.path.exists():
             self._load()
+        if self._delivering:
+            self._delivering.retry_spooled()
 
     def _load(self) -> None:
         assert self.path is not None
@@ -67,6 +74,10 @@ class ScopeLedger:
             return self.GENESIS_HASH
         return str(self._events[-1]["event_hash"])
 
+    @property
+    def delivery_failure_count(self) -> int:
+        return self._delivery_failures
+
     def append(
         self,
         event_type: str,
@@ -83,6 +94,7 @@ class ScopeLedger:
             "timestamp": _utc_now(),
             "event_type": event_type,
             "previous_event_hash": self.last_hash,
+            "delivery_state": "pending",
         }
         if actor_id:
             event["actor_id"] = actor_id
@@ -96,11 +108,23 @@ class ScopeLedger:
             event["grant_id"] = grant_id
         if metadata:
             event["metadata"] = metadata
+        high_risk = is_high_risk_ledger_event(event_type, metadata)
+        if self._delivering:
+            try:
+                state = self._delivering.deliver_remote(event, fail_closed=high_risk)
+            except LedgerDeliveryError as exc:
+                raise LedgerError(str(exc)) from exc
+            event["delivery_state"] = state
+            if state in ("failed", "spooled"):
+                self._delivery_failures += 1
+        else:
+            event["delivery_state"] = "delivered"
+
         event = attach_hash(event, "event_hash")
         self._events.append(event)
-        if self._sinks:
-            MultiSink(self._sinks).append(event)
-        elif self.path:
+        if self.path:
+            from scope.ledger_sinks import LocalJsonlSink
+
             LocalJsonlSink(self.path).append(event)
         return event
 
