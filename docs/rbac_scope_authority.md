@@ -35,3 +35,21 @@ Implemented in `scope/authority.py` and invoked from `ScopeEngine.submit_decisio
 - Identity assurance reaches IAL3/IAL4 (institutional OIDC path)
 
 Identity assurance provenance records which stage resolved the role (`role_resolution_source`).
+
+## authority_checks provenance
+
+Every decision and grant records explicit two-stage authority outcomes:
+
+```json
+{
+  "authority_checks": {
+    "rbac_enforced": true,
+    "rbac_role_valid": true,
+    "scope_role_valid": true,
+    "scope_approval_valid": true,
+    "delegation_id": null
+  }
+}
+```
+
+When RBAC is disabled or identity is below IAL3, `rbac_enforced` and `rbac_role_valid` are `false` so auditors can distinguish skipped checks from passed checks. Active delegations populate `delegation_id` in both identity provenance and `authority_checks`.
