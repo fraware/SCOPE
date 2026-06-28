@@ -11,18 +11,50 @@ from scope.errors import ScopeValidationError
 from scope.policy import PolicyStore
 from scope.signing import Ed25519PublicVerifier, verify_artifact_signature
 
+_LEGACY_PRIVATE_KEY_FIELDS = frozenset({"private_key_file", "private_key_path"})
+
+
+def _sanitize_reviewer_entry(entry: Any) -> tuple[Any, list[str]]:
+    """Strip legacy private key fields from a registry reviewer entry."""
+    if not isinstance(entry, dict):
+        return entry, []
+    removed = [field for field in _LEGACY_PRIVATE_KEY_FIELDS if field in entry]
+    if not removed:
+        return entry, []
+    cleaned = {key: value for key, value in entry.items() if key not in _LEGACY_PRIVATE_KEY_FIELDS}
+    return cleaned, removed
+
+
+def _sanitize_registry_data(data: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    """Return registry copy with private key fields removed from reviewer entries."""
+    sanitized = dict(data)
+    reviewers = sanitized.get("reviewers") or {}
+    cleaned_reviewers: dict[str, Any] = {}
+    removed_count = 0
+    for reviewer_id, entry in reviewers.items():
+        cleaned_entry, removed_fields = _sanitize_reviewer_entry(entry)
+        cleaned_reviewers[str(reviewer_id)] = cleaned_entry
+        removed_count += len(removed_fields)
+    sanitized["reviewers"] = cleaned_reviewers
+    return sanitized, removed_count
+
 
 def _registry_path(policy_dir: Path) -> Path:
     return policy_dir / "reviewer_key_registry.yaml"
 
 
-def _load_registry_file(path: Path) -> dict[str, Any]:
+def _load_registry_raw(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"version": "scope-core-v0.5", "reviewers": {}}
     with path.open(encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
     data.setdefault("reviewers", {})
     return data
+
+
+def _load_registry_file(path: Path) -> dict[str, Any]:
+    sanitized, _ = _sanitize_registry_data(_load_registry_raw(path))
+    return sanitized
 
 
 def _save_registry_file(path: Path, data: dict[str, Any]) -> None:
@@ -71,8 +103,6 @@ def register_reviewer_key(
     policy_dir: str | Path,
     reviewer_id: str,
     public_key_path: str | Path,
-    *,
-    private_key_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Register or update a reviewer public key in the policy registry."""
     policy_path = Path(policy_dir)
@@ -84,14 +114,9 @@ def register_reviewer_key(
         entry["public_key_file"] = str(pub_path.relative_to(policy_path))
     except ValueError:
         entry["public_key_file"] = str(pub_path.resolve())
-    if private_key_path is not None:
-        priv_path = Path(private_key_path)
-        try:
-            entry["private_key_file"] = str(priv_path.relative_to(policy_path))
-        except ValueError:
-            entry["private_key_file"] = str(priv_path.resolve())
     reviewers = registry.setdefault("reviewers", {})
-    reviewers[str(reviewer_id)] = entry
+    cleaned_entry, _ = _sanitize_reviewer_entry(entry)
+    reviewers[str(reviewer_id)] = cleaned_entry
     _save_registry_file(_registry_path(policy_path), registry)
     return {
         "reviewer_id": reviewer_id,
@@ -144,4 +169,21 @@ def verify_decision_against_registry(
         "signature_valid": signature_valid,
         "registry_version": policy.reviewer_key_registry_version,
         "registry_hash": policy.reviewer_key_registry_hash,
+    }
+
+
+def migrate_reviewer_registry(policy_dir: str | Path) -> dict[str, Any]:
+    """Persistently remove legacy private key fields from reviewer_key_registry.yaml."""
+    policy_path = Path(policy_dir)
+    registry_path = _registry_path(policy_path)
+    raw = _load_registry_raw(registry_path)
+    sanitized, removed_count = _sanitize_registry_data(raw)
+    changed = sanitized != raw
+    if changed:
+        _save_registry_file(registry_path, sanitized)
+    return {
+        "registry_path": str(registry_path),
+        "removed_private_key_fields": removed_count,
+        "changed": changed,
+        "reviewer_count": len(sanitized.get("reviewers") or {}),
     }

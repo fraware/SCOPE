@@ -1,4 +1,4 @@
-"""Scoped Scientific Authorization Protocol (SCOPE) v0.5."""
+"""Scoped Scientific Authorization Protocol (SCOPE) v0.6.0."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from scope.packets import PacketBuilder
 from scope.policy import PolicyStore
 from scope.quality import analyze_ledger, emit_quality_warning, is_weak_evidence
 from scope.review_assignment import resolve_review_assignment
+from scope.review_auto_assign import auto_assign as resolve_auto_assign
 from scope.review_queue import ReviewQueue, aggregate_queue_status, queue_metrics
 from scope.review_session import ReviewSession
 from scope.schema_util import load_schema
@@ -228,12 +229,46 @@ class ScopeEngine:
         packet: dict[str, Any],
         reviewer: str | Path | dict[str, Any],
         decision: dict[str, Any],
+        *,
+        identity_token: str | None = None,
+        enforce_rbac: bool | None = None,
     ) -> dict[str, Any]:
         if not isinstance(reviewer, dict):
             with Path(reviewer).open(encoding="utf-8") as fh:
                 reviewer_data = json.load(fh)
         else:
             reviewer_data = reviewer
+
+        if identity_token:
+            from scope.identity import apply_identity_to_reviewer, verify_token_from_env
+
+            identity = verify_token_from_env(identity_token, policy_dir=self.policy.policy_dir)
+            reviewer_data = apply_identity_to_reviewer(reviewer_data, identity)
+
+        from scope.errors import DecisionValidationError
+        from scope.rbac import check_rbac_permission, enforce_rbac_enabled
+
+        should_enforce = enforce_rbac if enforce_rbac is not None else enforce_rbac_enabled()
+        if should_enforce:
+            rid = str(reviewer_data.get("reviewer_id", ""))
+            role = str(reviewer_data.get("role", ""))
+            check_rbac_permission(rid, role, "submit_decisions", self.policy.policy_dir)
+
+        if not decision.get("co_reviewers"):
+            assignment = resolve_review_assignment(packet, self.policy)
+            if len(assignment.get("required_roles") or []) > 1:
+                domain_overlay = packet.get("scientific_context", {}).get("domain_overlay")
+                overlay = self.policy.get_domain_overlay(domain_overlay)
+                mandatory = (overlay or {}).get("mandatory_session_roles") or []
+                if mandatory or self.policy.requires_multi_reviewer_session(
+                    packet["review_request"]["scientific_action_type"],
+                    domain_overlay=domain_overlay,
+                ):
+                    raise DecisionValidationError(
+                        f"Action requires multi-role review session "
+                        f"(roles: {assignment['required_roles']}). "
+                        "Use `scope review session create` and session vote workflow."
+                    )
 
         result = self._decision_engine.submit(packet, reviewer_data, decision)
         self.ledger.append(
@@ -304,11 +339,28 @@ class ScopeEngine:
         decision: dict[str, Any],
         *,
         replace_vote: bool = False,
+        identity_token: str | None = None,
+        enforce_rbac: bool | None = None,
     ) -> dict[str, Any]:
+        reviewer_data = dict(reviewer)
+        if identity_token:
+            from scope.identity import apply_identity_to_reviewer, verify_token_from_env
+
+            identity = verify_token_from_env(identity_token, policy_dir=self.policy.policy_dir)
+            reviewer_data = apply_identity_to_reviewer(reviewer_data, identity)
+
+        from scope.rbac import check_rbac_permission, enforce_rbac_enabled
+
+        should_enforce = enforce_rbac if enforce_rbac is not None else enforce_rbac_enabled()
+        if should_enforce:
+            rid = str(reviewer_data.get("reviewer_id", ""))
+            role = str(reviewer_data.get("role", ""))
+            check_rbac_permission(rid, role, "vote_in_session", self.policy.policy_dir)
+
         veto_roles = session.quorum_policy.get("safety_veto_roles") or []
         result = self._decision_engine.submit(
             packet,
-            reviewer,
+            reviewer_data,
             decision,
             skip_co_review=True,
             session_mode=True,
@@ -316,19 +368,19 @@ class ScopeEngine:
         )
         self.ledger.append(
             "decision_submitted",
-            actor_id=reviewer.get("reviewer_id"),
-            reviewer_role=reviewer.get("role"),
+            actor_id=reviewer_data.get("reviewer_id"),
+            reviewer_role=reviewer_data.get("role"),
             packet_id=packet["packet_id"],
             decision_id=result["decision_id"],
-            metadata=self._decision_ledger_metadata(packet, reviewer, decision, result),
+            metadata=self._decision_ledger_metadata(packet, reviewer_data, decision, result),
         )
         session.add_vote(result, replace=replace_vote)
         self._persist_session(session)
         self._emit_decision_quality_warnings(packet, result)
         self.ledger.append(
             "reviewer_vote_recorded",
-            actor_id=reviewer.get("reviewer_id"),
-            reviewer_role=reviewer.get("role"),
+            actor_id=reviewer_data.get("reviewer_id"),
+            reviewer_role=reviewer_data.get("role"),
             packet_id=packet["packet_id"],
             decision_id=result["decision_id"],
             metadata={"session_id": session.session_id, "replace_vote": replace_vote},
@@ -551,7 +603,45 @@ class ScopeEngine:
         report["metrics"]["overdue_queue_count"] = qm["overdue_queue_count"]
         report["summary"]["open_queue_count"] = qm["open_queue_count"]
         report["summary"]["overdue_queue_count"] = qm["overdue_queue_count"]
+        if qm["overdue_queue_count"] > 0:
+            report["warnings"].append(
+                {
+                    "warning_type": "review_sla_overdue",
+                    "reason": (
+                        f"{qm['overdue_queue_count']} review queue entries are past SLA due date."
+                    ),
+                }
+            )
         return report
+
+    def record_runtime_violation(
+        self,
+        grant_id: str,
+        *,
+        tool: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        """Record a confirmed runtime scope violation for quality metrics."""
+        return self.ledger.append(
+            "runtime_scope_violation",
+            grant_id=grant_id,
+            metadata={"requested_tool": tool, "reason": reason, "confirmed": True},
+        )
+
+    def record_grant_expiration(
+        self,
+        grant_id: str,
+        *,
+        reason: str,
+        packet_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Record structured grant expiration event."""
+        return self.ledger.append(
+            "grant_expired",
+            grant_id=grant_id,
+            packet_id=packet_id,
+            metadata={"reason": reason},
+        )
 
     def create_review_queue(
         self,
@@ -559,13 +649,33 @@ class ScopeEngine:
         *,
         queue_dir: str | Path | None = None,
         sla_hours: int = 72,
+        auto_assign: bool = False,
     ) -> ReviewQueue:
-        return ReviewQueue.create(
+        entry = ReviewQueue.create(
             packet,
             sla_hours=sla_hours,
             queue_dir=queue_dir,
             persist=queue_dir is not None,
         )
+        if auto_assign:
+            reviewer = resolve_auto_assign(packet, self.policy)
+            entry.assign(reviewer)
+            if queue_dir:
+                entry.save()
+        return entry
+
+    def escalate_review_queues(
+        self,
+        *,
+        queue_dir: str | Path | None = None,
+        dry_run: bool = False,
+    ) -> list[dict[str, Any]]:
+        from scope.workflow_escalation import emit_sla_breach_events, scan_overdue_queues
+
+        breaches = scan_overdue_queues(queue_dir, self.policy.policy_dir, dry_run=dry_run)
+        if not dry_run:
+            emit_sla_breach_events(self, breaches, policy_dir=self.policy.policy_dir)
+        return breaches
 
     def assign_review_queue(
         self,

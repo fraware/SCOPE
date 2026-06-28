@@ -77,7 +77,8 @@ Queue status lifecycle: `open` → `assigned` → `decided` → `granted` (or `c
 ## Generate report
 
 ```bash
-scope quality report --ledger logs/scope_events.jsonl --out report.json
+scope quality report --ledger logs/scope_events.jsonl --out report.json \
+  --queue-dir .scope/queues
 ```
 
 All metrics in `policy/quality_metrics.yaml` are implemented in v0.5 (`v0_4_status: implemented` for core metrics; `v0_5_status: implemented` for queue metrics).

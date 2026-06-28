@@ -54,4 +54,28 @@ Duplicate votes from the same reviewer are rejected. Votes are recorded in both 
 
 ## Policy version
 
-Active policy is tagged `scope-core-v0.5`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
+Active policy is tagged `scope-core-v0.6`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
+
+## Identity (v0.6)
+
+Optional OIDC/JWT verification binds bearer tokens to reviewer identity:
+
+| Variable | Purpose |
+|----------|---------|
+| `SCOPE_OIDC_ENABLED` | Enable REST middleware identity binding |
+| `SCOPE_OIDC_JWKS_URL` | JWKS endpoint for RS256 verification |
+| `SCOPE_OIDC_ISSUER` | Expected JWT `iss` claim |
+| `SCOPE_OIDC_AUDIENCE` | Expected JWT `aud` claim |
+| `SCOPE_OIDC_PUBLIC_KEY_PEM` | Static PEM alternative to JWKS |
+
+Claim mapping is configured in `policy/identity_mapping.yaml`. CLI: `scope identity verify-token --token ...`
+
+## Trust root (v0.6)
+
+Signed decisions and grants carry provenance hashes:
+
+- `scope_policy_hash` — canonical digest of the policy bundle
+- `reviewer_key_registry_hash` — digest of `reviewer_key_registry.yaml`
+- `scope_trust_root_hash` — SHA-256 of the concatenated policy and registry hashes
+
+PCS release manifests include `scope_trust_root_hash` for downstream verification. See [key_management.md](key_management.md) for registry workflow.

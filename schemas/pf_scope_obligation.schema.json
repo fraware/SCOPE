@@ -14,7 +14,7 @@
     "expiration"
   ],
   "properties": {
-    "obligation_version": { "type": "string", "pattern": "^pf-core-v0\\.4$" },
+    "obligation_version": { "type": "string", "pattern": "^pf-core-v0\\.(4|5)$" },
     "grant_id": { "type": "string" },
     "grant_hash": { "type": "string", "pattern": "^sha256:" },
     "permitted_tools": { "type": "array", "items": { "type": "string" } },

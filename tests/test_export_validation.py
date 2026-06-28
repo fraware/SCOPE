@@ -26,7 +26,7 @@ def test_pf_export_validate():
     grant = engine.issue_grant(packet, decision)
     pf = export_pf_obligation(grant)
     validate_pf_export(pf, grant, SCHEMAS / "pf_scope_obligation.schema.json")
-    assert pf["obligation_version"] == "pf-core-v0.4"
+    assert pf["obligation_version"] == "pf-core-v0.5"
 
 
 def test_pcs_export_validate(tmp_path):
@@ -41,7 +41,7 @@ def test_pcs_export_validate(tmp_path):
     out = export_pcs_artifact(packet, decision, grant, tmp_path / "pcs")
     validate_pcs_export(out, SCHEMAS / "pcs_scope_artifact.schema.json")
     manifest = json.loads((out / "release_manifest.json").read_text())
-    assert manifest["manifest_version"] == "pcs-v0.4"
+    assert manifest["manifest_version"] == "pcs-v0.5"
 
 
 def test_tampered_grant_fails_validation(tmp_path):

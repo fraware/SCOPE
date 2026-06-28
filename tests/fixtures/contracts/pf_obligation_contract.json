@@ -1,5 +1,5 @@
 {
-  "obligation_version": "pf-core-v0.4",
+  "obligation_version": "pf-core-v0.5",
   "grant_id": "SCOPE-GRANT-CONTRACT",
   "grant_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "permitted_tools": ["protocol_editor.draft_change"],

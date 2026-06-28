@@ -1,6 +1,21 @@
-# Key management (v0.5)
+# Key management (v0.6)
 
 SCOPE supports optional local binding between `reviewer_id` and Ed25519 public keys via `policy/reviewer_key_registry.yaml`.
+
+## Signing providers (v0.6)
+
+| Provider | CLI flag | Description |
+|----------|----------|-------------|
+| `local` | `--signing-key` / `--key` | Explicit Ed25519 private key PEM (default) |
+| `env` | `--signing-provider env` | Reads `SCOPE_SIGNING_KEY` path |
+| `registry` | `--signing-provider registry --reviewer-id X` | Pilot: `signing_key_path` in registry entry |
+
+```bash
+scope decision sign --decision d.json --signing-provider env --out signed.json
+scope akta review ... --signing-provider registry --reviewer-id ds1 --signing-key ignored
+```
+
+**Pilot only:** `signing_key_path` in `reviewer_key_registry.yaml` references a local private key for institutional pilots. Do not use in production; prefer HSM or env-scoped keys.
 
 ## Registry file
 
@@ -10,23 +25,31 @@ reviewers:
   protocol_owner_1:
     public_key_ref: sha256:...
     public_key_file: .scope/keys/protocol_owner_1.pub
-    private_key_file: .scope/keys/protocol_owner_1.pem  # dev only; omit in production
 ```
 
 - `public_key_ref` is the SHA-256 canonical hash of the PEM public key (same value attached to signed decisions).
 - `public_key_file` enables signature verification without passing `--public-key` on the CLI.
-- `private_key_file` is stored only for development convenience; never commit production private keys.
+- Private keys remain local to reviewers and are never stored in the registry.
 
 ## Register a reviewer key
 
 ```bash
 scope key register --reviewer-id protocol_owner_1 \
   --public-key keys/protocol_owner.pub \
-  --private-key keys/protocol_owner.pem \
   --policy policy/
 ```
 
 This updates `policy/reviewer_key_registry.yaml` and prints the computed `public_key_ref`.
+
+## Migrate legacy registry entries
+
+If an older registry YAML contains `private_key_file` or `private_key_path`, remove them:
+
+```bash
+scope key migrate-registry --policy policy/
+```
+
+Private keys are stripped on registry load and register as well; migration rewrites the YAML on disk.
 
 ## Signing enforcement
 
@@ -55,6 +78,19 @@ PCS release manifests include:
 - `reviewer_public_key_ref` (from signed decision when present)
 - `registry_version` (registry YAML `version` field)
 - `registry_hash` (SHA-256 of canonical registry YAML)
+- `scope_trust_root_hash` (combined policy + registry trust root)
+
+## Trust root hashes
+
+Three related digests appear in decision and grant provenance:
+
+| Field | Meaning |
+|-------|---------|
+| `scope_policy_hash` | SHA-256 of canonical policy YAML bundle (roles, scopes, matrices, overlays) |
+| `reviewer_key_registry_hash` | SHA-256 of canonical `reviewer_key_registry.yaml` |
+| `scope_trust_root_hash` | SHA-256 of concatenated `scope_policy_hash` + `reviewer_key_registry_hash` |
+
+Use `scope_trust_root_hash` when a downstream system needs a single digest binding both authorization policy and reviewer identity policy. Policy and registry hashes remain available separately for partial updates or audit.
 
 ## Operational guidance
 

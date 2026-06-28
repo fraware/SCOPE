@@ -3,7 +3,7 @@
   "$id": "https://scope.dev/schemas/scope_decision.schema.json",
   "title": "SCOPE Decision",
   "type": "object",
-  "required": ["decision_id", "packet_id", "decided_at", "reviewer", "decision", "decision_hash"],
+  "required": ["decision_id", "packet_id", "decided_at", "reviewer", "decision", "decision_hash", "provenance"],
   "properties": {
     "decision_id": { "type": "string" },
     "packet_id": { "type": "string" },
@@ -31,7 +31,25 @@
     },
     "expiration": { "type": "object" },
     "confidence": { "type": "object" },
-    "decision_hash": { "type": "string", "pattern": "^sha256:" }
+    "decision_hash": { "type": "string", "pattern": "^sha256:" },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "scope_policy_version",
+        "scope_policy_hash",
+        "reviewer_key_registry_version",
+        "reviewer_key_registry_hash",
+        "scope_trust_root_hash"
+      ],
+      "properties": {
+        "scope_policy_version": { "type": "string" },
+        "scope_policy_hash": { "type": "string", "pattern": "^sha256:" },
+        "reviewer_key_registry_version": { "type": "string" },
+        "reviewer_key_registry_hash": { "type": "string", "pattern": "^sha256:" },
+        "scope_trust_root_hash": { "type": "string", "pattern": "^sha256:" }
+      },
+      "additionalProperties": true
+    }
   },
   "additionalProperties": true
 }

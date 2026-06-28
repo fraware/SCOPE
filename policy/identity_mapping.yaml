@@ -1,0 +1,14 @@
+version: scope-core-v0.6
+description: Map OIDC JWT claims to SCOPE reviewer identity.
+claim_mappings:
+  reviewer_id: sub
+  role_claim: scope_role
+  groups_claim: groups
+group_to_role:
+  scope-domain-scientist: domain_scientist
+  scope-system-owner: system_owner
+  scope-biosecurity: biosecurity_reviewer
+  scope-clinical: clinical_reviewer
+default_role: domain_scientist
+issuer_required: true
+audience_required: true

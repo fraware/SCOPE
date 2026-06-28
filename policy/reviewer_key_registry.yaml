@@ -1,4 +1,4 @@
-version: scope-core-v0.5
+version: scope-core-v0.6
 description: |
   Optional local registry mapping reviewer_id to expected public key references.
   Institutions populate this file; empty registry skips identity binding checks.

@@ -1,6 +1,8 @@
-version: scope-overlay-v0.5
+version: scope-overlay-v0.6
 overlay_id: genomics_research
 description: Genomics research overlay requiring biosecurity co-review on tool mutations.
+mandatory_session_roles:
+  - biosecurity_reviewer
 matrix_overrides:
   A8_tool_or_workflow_mutation:
     required_roles:

@@ -174,4 +174,87 @@ def create_session_store(
     if normalized == "sqlite":
         path = session_dir or ".scope/sessions.db"
         return SQLiteSessionStore(path)
+    if normalized == "replicated_json":
+        if not session_dir:
+            raise ValueError("replicated_json store requires session_dir with primary path")
+        parts = str(session_dir).split(":", 1)
+        primary = parts[0]
+        backup = parts[1] if len(parts) > 1 else str(Path(primary).parent / "sessions_backup")
+        return ReplicatedJsonSessionStore(primary, backup)
     raise ValueError(f"Unknown session store type: {store_type}")
+
+
+class DistributedSessionStore(SessionStore):
+    """HA hook: primary SQLite with optional read-replica path for status queries."""
+
+    def __init__(
+        self,
+        primary_path: str | Path,
+        *,
+        read_replica_path: str | Path | None = None,
+    ) -> None:
+        self._primary = SQLiteSessionStore(primary_path)
+        self._replica = (
+            SQLiteSessionStore(read_replica_path) if read_replica_path else None
+        )
+
+    def save(self, artifact: dict[str, Any]) -> None:
+        self._primary.save(artifact)
+
+    def load(self, session_id: str) -> dict[str, Any]:
+        if self._replica and self._replica.exists(session_id):
+            try:
+                return self._replica.load(session_id)
+            except KeyError:
+                pass
+        return self._primary.load(session_id)
+
+    def exists(self, session_id: str) -> bool:
+        if self._replica and self._replica.exists(session_id):
+            return True
+        return self._primary.exists(session_id)
+
+    def status(self, session_id: str) -> dict[str, Any]:
+        if self._replica and self._replica.exists(session_id):
+            store = self._replica
+        else:
+            store = self._primary
+        return store.status(session_id)
+
+
+class ReplicatedJsonSessionStore(SessionStore):
+    """Write-through JSON session store to primary and backup directories."""
+
+    def __init__(self, primary_dir: str | Path, backup_dir: str | Path) -> None:
+        self._primary = JsonFileSessionStore(primary_dir)
+        self._backup = JsonFileSessionStore(backup_dir)
+
+    def save(self, artifact: dict[str, Any]) -> None:
+        self._primary.save(artifact)
+        self._backup.save(artifact)
+
+    def load(self, session_id: str) -> dict[str, Any]:
+        try:
+            return self._primary.load(session_id)
+        except KeyError:
+            return self._backup.load(session_id)
+
+    def exists(self, session_id: str) -> bool:
+        return self._primary.exists(session_id) or self._backup.exists(session_id)
+
+    def status(self, session_id: str) -> dict[str, Any]:
+        return self.load(session_id)
+
+
+def replicate_sessions(source: str | Path, dest: str | Path) -> dict[str, Any]:
+    """Copy all session JSON files from source directory to dest."""
+    src = Path(source)
+    dst = Path(dest)
+    dst.mkdir(parents=True, exist_ok=True)
+    copied = 0
+    for path in sorted(src.glob("*.json")):
+        content = path.read_text(encoding="utf-8")
+        (dst / path.name).write_text(content, encoding="utf-8")
+        copied += 1
+    return {"copied": copied, "source": str(src), "dest": str(dst)}
+

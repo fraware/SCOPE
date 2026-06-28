@@ -20,7 +20,11 @@ DRIFT = ROOT / "examples" / "protocol_drift"
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    from adapters.generic_rest import server
+
+    server.reset_engine_cache()
+    yield TestClient(app)
+    server.reset_engine_cache()
 
 
 def _load(name: str, base: Path = EX) -> dict:
@@ -93,7 +97,7 @@ def test_grant_revoke_and_status(client, tmp_path, monkeypatch):
     monkeypatch.setenv("SCOPE_LEDGER_PATH", str(ledger))
     from adapters.generic_rest import server
 
-    server._engine = None
+    server.reset_engine_cache()
 
     packet = client.post("/v0/packets", json=_packet_payload()).json()
     decision = client.post(
@@ -290,7 +294,7 @@ def test_rest_persistent_session_store(client, tmp_path, monkeypatch):
     monkeypatch.setenv("SCOPE_SESSION_DIR", str(session_dir))
     from adapters.generic_rest import server
 
-    server._engine = None
+    server.reset_engine_cache()
 
     trigger = {
         "akta_admissibility": "review_required",
@@ -332,10 +336,51 @@ def test_quality_endpoint(client):
     resp = client.get("/v0/quality")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["report_version"] == "0.5"
-    assert body["policy_version"] == "scope-core-v0.5"
+    assert body["report_version"] == "0.6"
+    assert body["policy_version"] == "scope-core-v0.6"
     assert "metrics" in body
     assert "warnings" in body
+
+
+def test_quality_endpoint_custom_queue_dir(client, tmp_path, monkeypatch):
+    from adapters.generic_rest import server
+
+    queue_dir = tmp_path / "custom_queues"
+    monkeypatch.setenv("SCOPE_QUEUE_DIR", str(queue_dir))
+    server._engine = None
+
+    packet = client.post("/v0/packets", json=_packet_payload()).json()
+    client.post(
+        "/v0/review-queue",
+        json={"packet": packet, "sla_hours": 24, "queue_dir": str(queue_dir)},
+    )
+
+    resp = client.get("/v0/quality", params={"queue_dir": str(queue_dir)})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["metrics"]["open_queue_count"] >= 1
+
+
+def test_akta_review_rest_endpoint(client, tmp_path):
+    from adapters.generic_rest import server
+
+    server.reset_engine_cache()
+    out_dir = tmp_path / "akta_out"
+    payload = {
+        "akta_record": _load("akta_record.json", DRIFT),
+        "akta_trigger": _load("review_trigger.json", DRIFT),
+        "grant_scope": "protocol_draft",
+        "reviewer": _load("reviewer_protocol_owner.json", DRIFT),
+        "decision_rationale": "REST AKTA review path.",
+        "out_dir": str(out_dir),
+    }
+    resp = client.post("/v0/akta/review", json=payload)
+    assert resp.status_code == 200
+    summary = resp.json()
+    assert summary["status"] == "completed"
+    assert summary["approved_scope"] == "protocol_draft"
+    assert summary["scope_trust_root_hash"].startswith("sha256:")
+    assert (out_dir / "scope_grant.json").exists()
 
 
 def test_drift_example_packet(client):
@@ -351,7 +396,7 @@ def test_api_key_required_when_configured(client, monkeypatch):
     monkeypatch.setenv("SCOPE_API_KEY", "test-secret-key")
     from adapters.generic_rest import server
 
-    server._engine = None
+    server.reset_engine_cache()
 
     health = client.get("/v0/health")
     assert health.status_code == 200
@@ -452,7 +497,6 @@ def test_key_registry_rest_endpoints(client, tmp_path, monkeypatch):
         json={
             "reviewer_id": "rest_rev",
             "public_key_path": str(pub),
-            "private_key_path": str(key),
         },
     )
     assert registered.status_code == 200

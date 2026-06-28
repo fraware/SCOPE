@@ -52,3 +52,13 @@ def test_hash_changes_when_payload_changes():
         field_name="grant_hash",
     )
     assert h1 != h2
+
+
+def test_scope_trust_root_hash():
+    from scope.hash import scope_trust_root_hash
+
+    policy_hash = "sha256:" + "a" * 64
+    registry_hash = "sha256:" + "b" * 64
+    root = scope_trust_root_hash(policy_hash, registry_hash)
+    assert root.startswith("sha256:")
+    assert len(root) == 7 + 64

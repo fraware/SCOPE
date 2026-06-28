@@ -1,0 +1,6 @@
+version: scope-core-v0.6
+escalation_reviewer:
+  reviewer_id: pi1
+  role: principal_investigator
+auto_escalate_status: true
+emit_ledger_events: true

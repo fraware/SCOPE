@@ -1,0 +1,10 @@
+version: scope-core-v0.6
+description: Default reviewer assignments by role for auto-assignment.
+assignments:
+  domain_scientist: ds1
+  system_owner: so1
+  biosecurity_reviewer: bio1
+  clinical_reviewer: clin1
+  protocol_owner: po1
+  principal_investigator: pi1
+round_robin_from_registry: true

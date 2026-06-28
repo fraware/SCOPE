@@ -1,0 +1,23 @@
+{
+  "name": "biosecurity_mandatory_session",
+  "akta_record": {
+    "record_id": "AKTA-EVAL-BIO-SESSION",
+    "scientific_action_type": "A8_tool_or_workflow_mutation"
+  },
+  "akta_trigger": {
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A8_tool_or_workflow_mutation",
+    "requested_action": "mutate_permissions",
+    "requested_tool": "workflow.mutate_permissions",
+    "requested_scope": "tool_permission_escalation",
+    "scientific_context": {"domain_overlay": "genomics_research"}
+  },
+  "expected_required_roles": ["system_owner", "domain_scientist", "biosecurity_reviewer"],
+  "expect_decision_error": true,
+  "reviewer": {"reviewer_id": "so1", "role": "system_owner"},
+  "decision": {
+    "type": "approve",
+    "approved_scope": "tool_permission_escalation",
+    "rationale": "solo without session"
+  }
+}

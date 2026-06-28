@@ -3,9 +3,9 @@
   "$id": "https://scope.dev/schemas/pcs_scope_artifact.schema.json",
   "title": "PCS SCOPE Artifact Bundle",
   "type": "object",
-  "required": ["manifest_version", "artifacts", "hashes", "source"],
+  "required": ["manifest_version", "artifacts", "hashes", "source", "scope_trust_root_hash"],
   "properties": {
-    "manifest_version": { "type": "string", "pattern": "^pcs-v0\\.4$" },
+    "manifest_version": { "type": "string", "pattern": "^pcs-v0\\.(4|5)$" },
     "artifacts": {
       "type": "array",
       "minItems": 4,
@@ -33,7 +33,10 @@
     "grant_signature": { "type": "string" },
     "reviewer_public_key_ref": { "type": "string", "pattern": "^sha256:" },
     "signature_algorithm": { "type": "string" },
-    "signed_payload_hash": { "type": "string", "pattern": "^sha256:" }
+    "signed_payload_hash": { "type": "string", "pattern": "^sha256:" },
+    "registry_version": { "type": "string" },
+    "registry_hash": { "type": "string", "pattern": "^sha256:" },
+    "scope_trust_root_hash": { "type": "string", "pattern": "^sha256:" }
   },
   "additionalProperties": true
 }

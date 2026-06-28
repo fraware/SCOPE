@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.6.0 (2026-06-28)
+
+Institutional foundations release:
+
+- **OIDC/JWT identity**: `scope identity verify-token`, `SCOPE_OIDC_*` env vars, `--identity-token` on decision submit and akta review
+- **Signing providers**: `LocalPemProvider`, `EnvKeyProvider`, `RegistryKeyProvider` via `--signing-provider`
+- **Institutional RBAC**: `policy/org_rbac.yaml`, `scope/rbac.py`, `--enforce-rbac` / `SCOPE_ENFORCE_RBAC`
+- **Review queue**: auto-assign, SLA escalation, file locking, static HTML dashboard
+- **Ledger sinks**: local JSONL + optional `RemoteHttpSink` (`SCOPE_LEDGER_REMOTE_URL`)
+- **Session HA hooks**: `ReplicatedJsonSessionStore`, `DistributedSessionStore`, `scope session replicate`
+- **Runtime violation loop**: `scope ledger record-violation`, `POST /v0/ledger/violations`, quality metric
+- **VSA live fetch**: `adapters/vsa/fetch_report.py`, `--vsa-url` on packet create
+- **AKTA pipeline scripts**: `scripts/akta_scope_pipeline.ps1` / `.sh`
+- **PF/PCS v0.5 contracts**: `pf-core-v0.5`, `pcs-v0.5` (backward compatible with v0.4 validators)
+- **Domain overlays**: clinical research overlay, overlay CLI validate/list, biosecurity mandatory session
+- **REST multi-tenant**: `EngineFactory` with `X-Scope-Policy-Dir`, `X-Scope-Ledger-Path` headers
+- **AKTA review**: queue auto-create, `review_opened` ledger events, multi-role session detection
+
+## v0.5.1 (2026-06-28)
+
+Engineering review release:
+
+- **`scope akta review`**: one-shot AKTA packet → decision → grant workflow with `summary.json`
+- **Quality report `--queue-dir`**: wire queue metrics through CLI (default `.scope/queues`)
+- **`scope key migrate-registry`**: strip legacy private key fields from registry YAML
+- **`scope_trust_root_hash`**: combined SHA-256 of policy hash + registry hash in decision/grant provenance and PCS manifest
+- **`POST /v0/akta/review`**: REST equivalent of `scope akta review`
+- **`GET /v0/quality?queue_dir=`**: custom queue directory for quality metrics
+- Production signing for `scope akta review` via `--signing-key`
+
 ## v0.5.0 (2026-06-28)
 
 Integration and lab-workflow release:

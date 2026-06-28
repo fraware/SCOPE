@@ -10,6 +10,7 @@ from typing import Any
 
 from scope.errors import LedgerError
 from scope.hash import attach_hash, verify_hash
+from scope.ledger_sinks import LedgerSink, LocalJsonlSink, MultiSink, build_ledger_sinks
 
 
 def _utc_now() -> str:
@@ -25,9 +26,20 @@ class ScopeLedger:
 
     GENESIS_HASH = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
 
-    def __init__(self, path: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        path: str | Path | None = None,
+        *,
+        sinks: list[LedgerSink] | None = None,
+    ) -> None:
         self.path = Path(path) if path else None
         self._events: list[dict[str, Any]] = []
+        if sinks is not None:
+            self._sinks = sinks
+        elif self.path:
+            self._sinks = build_ledger_sinks(self.path)
+        else:
+            self._sinks = []
         if self.path and self.path.exists():
             self._load()
 
@@ -86,10 +98,10 @@ class ScopeLedger:
             event["metadata"] = metadata
         event = attach_hash(event, "event_hash")
         self._events.append(event)
-        if self.path:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            with self.path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(event, sort_keys=True) + "\n")
+        if self._sinks:
+            MultiSink(self._sinks).append(event)
+        elif self.path:
+            LocalJsonlSink(self.path).append(event)
         return event
 
     def events(self) -> list[dict[str, Any]]:

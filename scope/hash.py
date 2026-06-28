@@ -50,3 +50,19 @@ def verify_hash(data: dict[str, Any], field_name: str) -> bool:
     expected = data[field_name]
     actual = compute_hash(data, field_name=field_name)
     return bool(expected == actual)
+
+
+def combine_sha256_hashes(*hashes: str) -> str:
+    """Combine one or more sha256-prefixed digests into a single trust-root hash."""
+    parts: list[str] = []
+    for value in hashes:
+        if not value.startswith("sha256:"):
+            raise ValueError(f"Expected sha256-prefixed hash, got: {value!r}")
+        parts.append(value)
+    digest = hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()
+    return f"sha256:{digest}"
+
+
+def scope_trust_root_hash(policy_hash: str, registry_hash: str) -> str:
+    """Canonical combined trust root from policy and reviewer key registry hashes."""
+    return combine_sha256_hashes(policy_hash, registry_hash)

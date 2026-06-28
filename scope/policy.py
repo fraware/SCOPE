@@ -9,7 +9,7 @@ from typing import Any, cast
 import yaml
 
 from scope.errors import PolicyError
-from scope.hash import canonical_json
+from scope.hash import canonical_json, scope_trust_root_hash
 
 
 class PolicyStore:
@@ -146,6 +146,10 @@ class PolicyStore:
             canonical_json(self._reviewer_key_registry).encode("utf-8")
         ).hexdigest()
         return f"sha256:{digest}"
+
+    @property
+    def scope_trust_root_hash(self) -> str:
+        return scope_trust_root_hash(self.policy_hash, self.reviewer_key_registry_hash)
 
     def get_domain_overlay(self, overlay_id: str | None) -> dict[str, Any] | None:
         if not overlay_id:

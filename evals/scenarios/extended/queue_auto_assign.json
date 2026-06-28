@@ -1,0 +1,17 @@
+{
+  "name": "queue_auto_assign",
+  "akta_record": {
+    "record_id": "AKTA-EVAL-QUEUE",
+    "scientific_action_type": "A6_experimental_planning"
+  },
+  "akta_trigger": {
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A6_experimental_planning",
+    "requested_action": "plan_validation",
+    "requested_tool": "experiment_planner.create_validation_plan",
+    "requested_scope": "single_validation_plan"
+  },
+  "auto_assign_queue": true,
+  "expected_assigned_reviewer_id": "ds1",
+  "expected_assigned_role": "domain_scientist"
+}
