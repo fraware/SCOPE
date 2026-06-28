@@ -3,6 +3,5 @@
   "approved_scope": "single_validation_run_draft",
   "rationale": "Weak evidence supports validation draft only; robot submission remains blocked.",
   "rejected_scope": ["robot_queue_submission", "active_protocol_update"],
-  "co_reviewers": ["domain_scientist"],
   "reviewer_confidence": 0.65
 }
