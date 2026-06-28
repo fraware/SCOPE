@@ -49,7 +49,7 @@ def test_milestone7_integrated_demo(tmp_path):
     pcs_dir = export_pcs_artifact(packet, decision, grant, tmp_path / "pcs")
     assert (pcs_dir / "release_manifest.json").exists()
     manifest = json.loads((pcs_dir / "release_manifest.json").read_text(encoding="utf-8"))
-    assert manifest["manifest_version"] == "pcs-v0.2"
+    assert manifest["manifest_version"] == "pcs-v0.4"
     assert set(manifest["artifacts"]) == {
         "scope_packet.json",
         "scope_decision.json",
