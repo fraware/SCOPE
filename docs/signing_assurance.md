@@ -30,3 +30,9 @@ Production mode enforces minimum SAL at grant issue.
 `scope.signing_assurance.HsmKmsSigningProvider` documents the institutional integration point. Configure vendor SDKs outside SCOPE; set `SCOPE_HSM_ENDPOINT` when wiring external signers.
 
 Schema provenance field: `signing_assurance_level`.
+
+## Related documentation
+
+- [key_management.md](key_management.md) — signing providers and key registry
+- [trusted_boundary.md](trusted_boundary.md) — production mode enforcement
+- [akta_review_contract.md](akta_review_contract.md) — SAL recorded in `summary.json`
