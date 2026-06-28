@@ -13,3 +13,14 @@ def is_production_mode() -> bool:
 
 def require_signatures() -> bool:
     return is_production_mode()
+
+
+def review_route_promotion_enabled() -> bool:
+    """When true, promote valid review_route values to requested_scope."""
+    value = os.environ.get("SCOPE_REVIEW_ROUTE_PROMOTION", "true").lower()
+    return value not in ("0", "false", "no")
+
+
+def api_key() -> str | None:
+    """Optional bearer token for REST API authentication."""
+    return os.environ.get("SCOPE_API_KEY")
