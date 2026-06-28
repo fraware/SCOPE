@@ -14,3 +14,5 @@ SCOPE operationalizes review by binding it to:
 - Measurable review quality
 
 The field-level change: **review becomes enforceable, auditable, and improvable.**
+
+See [scoped_scientific_authorization.md](scoped_scientific_authorization.md) for the SCOPE v0.7 implementation.
