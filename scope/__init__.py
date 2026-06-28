@@ -1,4 +1,4 @@
-"""Scoped Scientific Authorization Protocol (SCOPE) v0.6.0."""
+"""Scoped Scientific Authorization Protocol (SCOPE) v0.7.0."""
 
 from __future__ import annotations
 
@@ -239,20 +239,34 @@ class ScopeEngine:
         else:
             reviewer_data = reviewer
 
+        verified_identity = None
         if identity_token:
             from scope.identity import apply_identity_to_reviewer, verify_token_from_env
 
-            identity = verify_token_from_env(identity_token, policy_dir=self.policy.policy_dir)
-            reviewer_data = apply_identity_to_reviewer(reviewer_data, identity)
+            verified_identity = verify_token_from_env(
+                identity_token, policy_dir=self.policy.policy_dir
+            )
+            reviewer_data = apply_identity_to_reviewer(reviewer_data, verified_identity)
 
-        from scope.errors import DecisionValidationError
-        from scope.rbac import check_rbac_permission, enforce_rbac_enabled
+        from scope.authority import enforce_decision_authority
+        from scope.identity_assurance import merge_identity_provenance, resolve_identity_assurance
+        from scope.rbac import enforce_rbac_enabled
 
         should_enforce = enforce_rbac if enforce_rbac is not None else enforce_rbac_enabled()
-        if should_enforce:
-            rid = str(reviewer_data.get("reviewer_id", ""))
-            role = str(reviewer_data.get("role", ""))
-            check_rbac_permission(rid, role, "submit_decisions", self.policy.policy_dir)
+        identity_context = resolve_identity_assurance(
+            reviewer_data,
+            policy_dir=self.policy.policy_dir,
+            identity=verified_identity,
+            enforce_institutional=should_enforce,
+        )
+        enforce_decision_authority(
+            reviewer_data,
+            packet,
+            decision,
+            self.policy,
+            identity_context=identity_context,
+            enforce_rbac=should_enforce,
+        )
 
         if not decision.get("co_reviewers"):
             assignment = resolve_review_assignment(packet, self.policy)
@@ -264,6 +278,8 @@ class ScopeEngine:
                     packet["review_request"]["scientific_action_type"],
                     domain_overlay=domain_overlay,
                 ):
+                    from scope.errors import DecisionValidationError
+
                     raise DecisionValidationError(
                         f"Action requires multi-role review session "
                         f"(roles: {assignment['required_roles']}). "
@@ -271,6 +287,7 @@ class ScopeEngine:
                     )
 
         result = self._decision_engine.submit(packet, reviewer_data, decision)
+        result = merge_identity_provenance(result, identity_context)
         self.ledger.append(
             "decision_submitted",
             actor_id=reviewer_data.get("reviewer_id"),
@@ -343,21 +360,37 @@ class ScopeEngine:
         enforce_rbac: bool | None = None,
     ) -> dict[str, Any]:
         reviewer_data = dict(reviewer)
+        verified_identity = None
         if identity_token:
             from scope.identity import apply_identity_to_reviewer, verify_token_from_env
 
-            identity = verify_token_from_env(identity_token, policy_dir=self.policy.policy_dir)
-            reviewer_data = apply_identity_to_reviewer(reviewer_data, identity)
+            verified_identity = verify_token_from_env(
+                identity_token, policy_dir=self.policy.policy_dir
+            )
+            reviewer_data = apply_identity_to_reviewer(reviewer_data, verified_identity)
 
-        from scope.rbac import check_rbac_permission, enforce_rbac_enabled
+        from scope.authority import enforce_decision_authority
+        from scope.identity_assurance import merge_identity_provenance, resolve_identity_assurance
+        from scope.rbac import enforce_rbac_enabled
 
         should_enforce = enforce_rbac if enforce_rbac is not None else enforce_rbac_enabled()
-        if should_enforce:
-            rid = str(reviewer_data.get("reviewer_id", ""))
-            role = str(reviewer_data.get("role", ""))
-            check_rbac_permission(rid, role, "vote_in_session", self.policy.policy_dir)
-
+        identity_context = resolve_identity_assurance(
+            reviewer_data,
+            policy_dir=self.policy.policy_dir,
+            identity=verified_identity,
+            enforce_institutional=should_enforce,
+        )
         veto_roles = session.quorum_policy.get("safety_veto_roles") or []
+        enforce_decision_authority(
+            reviewer_data,
+            packet,
+            decision,
+            self.policy,
+            identity_context=identity_context,
+            enforce_rbac=should_enforce,
+            session_mode=True,
+            allowed_veto_roles=veto_roles,
+        )
         result = self._decision_engine.submit(
             packet,
             reviewer_data,
@@ -366,6 +399,7 @@ class ScopeEngine:
             session_mode=True,
             allowed_veto_roles=veto_roles,
         )
+        result = merge_identity_provenance(result, identity_context)
         self.ledger.append(
             "decision_submitted",
             actor_id=reviewer_data.get("reviewer_id"),
@@ -386,6 +420,51 @@ class ScopeEngine:
             metadata={"session_id": session.session_id, "replace_vote": replace_vote},
         )
         return result
+
+    def _finalize_grant_provenance(
+        self,
+        grant: dict[str, Any],
+        decision: dict[str, Any],
+        *,
+        signing_provider: str | None = None,
+    ) -> dict[str, Any]:
+        """Copy identity/signing assurance from decision into grant provenance."""
+        from scope.hash import attach_hash
+        from scope.signing_assurance import (
+            SAL0,
+            SAL1,
+            check_minimum_signing_assurance,
+            resolve_signing_assurance_level,
+        )
+
+        approved_scope = decision.get("decision", {}).get("approved_scope")
+        sal = resolve_signing_assurance_level(
+            decision,
+            provider_name=signing_provider,
+            reviewer_id=(decision.get("reviewer") or {}).get("reviewer_id"),
+        )
+        if sal == SAL0 and decision.get("decision_signature"):
+            sal = SAL1
+        check_minimum_signing_assurance(
+            sal,
+            self.policy.policy_dir,
+            approved_scope=str(approved_scope) if approved_scope else None,
+        )
+
+        provenance = dict(grant.get("provenance") or {})
+        dec_prov = decision.get("provenance") or {}
+        for field in (
+            "identity_assurance_level",
+            "role_resolution_source",
+            "delegation_id",
+            "identity_provider",
+            "identity_claim_hash",
+        ):
+            if field in dec_prov:
+                provenance[field] = dec_prov[field]
+        provenance["signing_assurance_level"] = sal
+        grant["provenance"] = provenance
+        return attach_hash(grant, "grant_hash")
 
     def issue_grant_from_session(
         self,
@@ -421,6 +500,7 @@ class ScopeEngine:
             merged,
             contributing_signatures=contributing_signatures,
         )
+        grant = self._finalize_grant_provenance(grant, merged)
         akta_blocked = packet.get("akta_constraints", {}).get("blocked_tools", [])
         grant_blocked = grant.get("authorization", {}).get("blocked_tools", [])
         preserved = all(tool in grant_blocked for tool in akta_blocked)
@@ -443,8 +523,14 @@ class ScopeEngine:
         decision: dict[str, Any],
         *,
         constraints: dict[str, Any] | None = None,
+        signing_provider: str | None = None,
     ) -> dict[str, Any]:
+        approved_scope = decision.get("decision", {}).get("approved_scope")
         grant = self._grant_engine.issue(packet, decision, constraints=constraints)
+        grant = self._finalize_grant_provenance(
+            grant, decision, signing_provider=signing_provider
+        )
+
         akta_blocked = packet.get("akta_constraints", {}).get("blocked_tools", [])
         grant_blocked = grant.get("authorization", {}).get("blocked_tools", [])
         preserved = all(tool in grant_blocked for tool in akta_blocked)
@@ -456,6 +542,7 @@ class ScopeEngine:
             metadata={
                 "scientific_action_type": packet["review_request"]["scientific_action_type"],
                 "residual_blocks_preserved": preserved,
+                "approved_scope": approved_scope,
             },
         )
         return grant
@@ -601,14 +688,26 @@ class ScopeEngine:
         qm = queue_metrics(queue_dir)
         report["metrics"]["open_queue_count"] = qm["open_queue_count"]
         report["metrics"]["overdue_queue_count"] = qm["overdue_queue_count"]
+        report["metrics"]["ledger_delivery_failure_count"] = self.ledger.delivery_failure_count
         report["summary"]["open_queue_count"] = qm["open_queue_count"]
         report["summary"]["overdue_queue_count"] = qm["overdue_queue_count"]
+        report["summary"]["ledger_delivery_failure_count"] = self.ledger.delivery_failure_count
         if qm["overdue_queue_count"] > 0:
             report["warnings"].append(
                 {
                     "warning_type": "review_sla_overdue",
                     "reason": (
                         f"{qm['overdue_queue_count']} review queue entries are past SLA due date."
+                    ),
+                }
+            )
+        if self.ledger.delivery_failure_count > 0:
+            report["warnings"].append(
+                {
+                    "warning_type": "ledger_delivery_failure",
+                    "reason": (
+                        f"{self.ledger.delivery_failure_count} ledger events failed remote "
+                        "delivery or were spooled for retry."
                     ),
                 }
             )
@@ -692,6 +791,45 @@ class ScopeEngine:
             entry = ReviewQueue.load(save_path)
         entry.assign(reviewer)
         entry.save(save_path)
+        return entry
+
+    def in_review_review_queue(self, queue: str | Path) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.mark_in_review()
+        entry.save(queue)
+        return entry
+
+    def needs_information_review_queue(
+        self,
+        queue: str | Path,
+        *,
+        reason: str = "",
+    ) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.mark_needs_information(reason=reason)
+        entry.save(queue)
+        return entry
+
+    def reopen_review_queue(self, queue: str | Path) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.reopen()
+        entry.save(queue)
+        return entry
+
+    def expire_review_queue(self, queue: str | Path) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.expire()
+        entry.save(queue)
+        return entry
+
+    def escalate_review_queue_entry(
+        self,
+        queue: str | Path,
+        escalation_reviewer: dict[str, Any] | None = None,
+    ) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.mark_escalated(escalation_reviewer)
+        entry.save(queue)
         return entry
 
     def decide_review_queue(
