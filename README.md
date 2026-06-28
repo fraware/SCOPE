@@ -2,7 +2,7 @@
 
 Home: [https://github.com/fraware/SCOPE](https://github.com/fraware/SCOPE)
 
-SCOPE is the Scoped Scientific Authorization Protocol (v0.6.0).
+SCOPE is the Scoped Scientific Authorization Protocol (v0.7.0).
 
 AKTA can decide that an AI-shaped scientific action requires review or authorization. SCOPE turns that decision into a structured review packet, assigns the right reviewer role, captures a scoped decision, emits a bounded grant, enforces expiration, and produces artifacts that can be verified and packaged.
 
@@ -250,7 +250,7 @@ allowed = engine.check_grant_detailed(grant, "protocol_editor.draft_change", {"p
 
 - `scope/` - core protocol engine
 - `schemas/` - JSON schemas for artifacts
-- `policy/` - YAML policy files (`scope-core-v0.6`) and domain overlays
+- `policy/` - YAML policy files (`scope-core-v0.7`) and domain overlays
 - `adapters/` - AKTA, VSA, PF-Core, PCS, REST integrations
 - `examples/` - scenario fixtures
 - `evals/` - eight core evaluation scenarios (+ four extended with `--extended`)
