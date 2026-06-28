@@ -248,7 +248,7 @@ class ScopeEngine:
             )
             reviewer_data = apply_identity_to_reviewer(reviewer_data, verified_identity)
 
-        from scope.authority import enforce_decision_authority
+        from scope.authority import enforce_decision_authority, merge_authority_provenance
         from scope.identity_assurance import merge_identity_provenance, resolve_identity_assurance
         from scope.rbac import enforce_rbac_enabled
 
@@ -259,7 +259,7 @@ class ScopeEngine:
             identity=verified_identity,
             enforce_institutional=should_enforce,
         )
-        enforce_decision_authority(
+        authority_result = enforce_decision_authority(
             reviewer_data,
             packet,
             decision,
@@ -288,6 +288,8 @@ class ScopeEngine:
 
         result = self._decision_engine.submit(packet, reviewer_data, decision)
         result = merge_identity_provenance(result, identity_context)
+        result = merge_authority_provenance(result, authority_result)
+        self._decision_engine.validate(result)
         self.ledger.append(
             "decision_submitted",
             actor_id=reviewer_data.get("reviewer_id"),
@@ -369,7 +371,7 @@ class ScopeEngine:
             )
             reviewer_data = apply_identity_to_reviewer(reviewer_data, verified_identity)
 
-        from scope.authority import enforce_decision_authority
+        from scope.authority import enforce_decision_authority, merge_authority_provenance
         from scope.identity_assurance import merge_identity_provenance, resolve_identity_assurance
         from scope.rbac import enforce_rbac_enabled
 
@@ -381,7 +383,7 @@ class ScopeEngine:
             enforce_institutional=should_enforce,
         )
         veto_roles = session.quorum_policy.get("safety_veto_roles") or []
-        enforce_decision_authority(
+        authority_result = enforce_decision_authority(
             reviewer_data,
             packet,
             decision,
@@ -400,6 +402,8 @@ class ScopeEngine:
             allowed_veto_roles=veto_roles,
         )
         result = merge_identity_provenance(result, identity_context)
+        result = merge_authority_provenance(result, authority_result)
+        self._decision_engine.validate(result)
         self.ledger.append(
             "decision_submitted",
             actor_id=reviewer_data.get("reviewer_id"),
@@ -456,9 +460,10 @@ class ScopeEngine:
         for field in (
             "identity_assurance_level",
             "role_resolution_source",
+            "identity_source",
             "delegation_id",
-            "identity_provider",
             "identity_claim_hash",
+            "authority_checks",
         ):
             if field in dec_prov:
                 provenance[field] = dec_prov[field]
@@ -501,6 +506,7 @@ class ScopeEngine:
             contributing_signatures=contributing_signatures,
         )
         grant = self._finalize_grant_provenance(grant, merged)
+        self._grant_engine.validate(grant)
         akta_blocked = packet.get("akta_constraints", {}).get("blocked_tools", [])
         grant_blocked = grant.get("authorization", {}).get("blocked_tools", [])
         preserved = all(tool in grant_blocked for tool in akta_blocked)
@@ -530,6 +536,7 @@ class ScopeEngine:
         grant = self._finalize_grant_provenance(
             grant, decision, signing_provider=signing_provider
         )
+        self._grant_engine.validate(grant)
 
         akta_blocked = packet.get("akta_constraints", {}).get("blocked_tools", [])
         grant_blocked = grant.get("authorization", {}).get("blocked_tools", [])
@@ -643,7 +650,7 @@ class ScopeEngine:
         decision: dict[str, Any],
         signer: Signer,
     ) -> dict[str, Any]:
-        return attach_signature(
+        signed = attach_signature(
             decision,
             signer,
             hash_field="decision_hash",
@@ -651,6 +658,23 @@ class ScopeEngine:
             reviewer_id=(decision.get("reviewer") or {}).get("reviewer_id"),
             key_registry=self.policy.reviewer_key_registry,
         )
+        from scope.identity_assurance import (
+            IAL0,
+            IAL1,
+            IdentityAssuranceContext,
+            merge_identity_provenance,
+        )
+
+        current_ial = (signed.get("provenance") or {}).get("identity_assurance_level", IAL0)
+        if current_ial == IAL0:
+            identity_context = IdentityAssuranceContext(
+                identity_assurance_level=IAL1,
+                role_resolution_source="local_signed_key",
+                identity_source="local_signed_key",
+                institutional_authority=False,
+            )
+            signed = merge_identity_provenance(signed, identity_context)
+        return signed
 
     def sign_grant(
         self,
@@ -822,14 +846,39 @@ class ScopeEngine:
         entry.save(queue)
         return entry
 
+    def information_received_review_queue(self, queue: str | Path) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.mark_information_received()
+        entry.save(queue)
+        return entry
+
     def escalate_review_queue_entry(
         self,
         queue: str | Path,
         escalation_reviewer: dict[str, Any] | None = None,
+        *,
+        reason: str = "",
+        actor_id: str | None = None,
     ) -> ReviewQueue:
         entry = ReviewQueue.load(queue)
-        entry.mark_escalated(escalation_reviewer)
+        prior_status = entry.status
+        entry.mark_escalated(
+            escalation_reviewer,
+            reason=reason,
+            actor_id=actor_id,
+        )
         entry.save(queue)
+        self.ledger.append(
+            "review_queue_escalated",
+            packet_id=entry.to_artifact().get("packet_id"),
+            actor_id=actor_id,
+            metadata={
+                "queue_id": entry.queue_id,
+                "prior_status": prior_status,
+                "escalation_reason": reason or None,
+                "escalation_reviewer": escalation_reviewer,
+            },
+        )
         return entry
 
     def decide_review_queue(
@@ -860,6 +909,17 @@ class ScopeEngine:
     ) -> ReviewQueue:
         entry = ReviewQueue.load(queue)
         entry.close(reason=reason)
+        entry.save(queue)
+        return entry
+
+    def cancel_review_queue(
+        self,
+        queue: str | Path,
+        *,
+        reason: str = "",
+    ) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.cancel(reason=reason)
         entry.save(queue)
         return entry
 
