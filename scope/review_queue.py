@@ -1,4 +1,4 @@
-"""Minimal review queue for open, assigned, and overdue tracking."""
+"""Minimal review queue with explicit workflow state machine."""
 
 from __future__ import annotations
 
@@ -11,12 +11,16 @@ from typing import Any
 from scope._version import __version__
 from scope.errors import ScopeValidationError
 from scope.file_lock import FileLock, lock_path_for
+from scope.review_workflow import (
+    OPEN_STATUSES,
+    TERMINAL_STATUSES,
+    requires_reopen_for_grant,
+    validate_transition,
+)
 from scope.schema_util import validate_artifact
 
 DEFAULT_QUEUE_DIR = Path(".scope/queues")
 DEFAULT_SLA_HOURS = 72
-OPEN_STATUSES = frozenset({"open", "assigned"})
-TERMINAL_STATUSES = frozenset({"granted", "closed", "cancelled", "completed"})
 
 
 def _utc_now() -> str:
@@ -109,8 +113,12 @@ class ReviewQueue:
                 fh.write("\n")
         return target
 
+    def _transition(self, new_status: str) -> None:
+        validate_transition(self.status, new_status)
+        self._data["status"] = new_status
+
     def assign(self, reviewer: dict[str, Any]) -> None:
-        if self.status not in OPEN_STATUSES:
+        if self.status not in ("open", "escalated"):
             raise ScopeValidationError(
                 f"Cannot assign reviewer to queue entry in status {self.status}"
             )
@@ -118,7 +126,7 @@ class ReviewQueue:
         role = reviewer.get("role")
         if not reviewer_id or not role:
             raise ScopeValidationError("Reviewer must include reviewer_id and role")
-        self._data["status"] = "assigned"
+        self._transition("assigned")
         self._data["assigned_at"] = _utc_now()
         self._data["reviewer"] = {
             "reviewer_id": str(reviewer_id),
@@ -126,22 +134,78 @@ class ReviewQueue:
         }
         self.validate()
 
-    def mark_decided(self, decision_id: str) -> None:
-        if self.status != "assigned":
+    def mark_in_review(self) -> None:
+        allowed = {"assigned", "escalated", "needs_information"}
+        if self.status not in allowed:
             raise ScopeValidationError(
-                f"Cannot mark decided from queue status {self.status}; expected assigned"
+                f"Cannot mark in_review from status {self.status}; expected {sorted(allowed)}"
             )
-        self._data["status"] = "decided"
+        self._transition("in_review")
+        self._data["in_review_at"] = _utc_now()
+        self.validate()
+
+    def mark_needs_information(self, *, reason: str = "") -> None:
+        self._transition("needs_information")
+        self._data["needs_information_at"] = _utc_now()
+        if reason:
+            self._data["needs_information_reason"] = reason
+        self.validate()
+
+    def mark_escalated(self, escalation_reviewer: dict[str, Any] | None = None) -> None:
+        self._transition("escalated")
+        self._data["escalated_at"] = _utc_now()
+        self._data["escalated"] = True
+        if escalation_reviewer:
+            self._data["escalation_reviewer"] = dict(escalation_reviewer)
+        self.validate()
+
+    def reopen(self) -> None:
+        self._transition("open")
+        self._data["reopened_at"] = _utc_now()
+        for key in (
+            "decided_at",
+            "granted_at",
+            "closed_at",
+            "decision_id",
+            "grant_id",
+            "close_reason",
+        ):
+            self._data.pop(key, None)
+        self.validate()
+
+    def expire(self) -> None:
+        if self.status in TERMINAL_STATUSES:
+            raise ScopeValidationError(f"Cannot expire queue entry in status {self.status}")
+        self._transition("expired")
+        self._data["expired_at"] = _utc_now()
+        self.validate()
+
+    def mark_decided(self, decision_id: str) -> None:
+        allowed_from = {"assigned", "in_review", "escalated"}
+        if self.status == "needs_information":
+            raise ScopeValidationError(
+                "Cannot mark decided from needs_information; return to in_review first"
+            )
+        if self.status not in allowed_from:
+            raise ScopeValidationError(
+                f"Cannot mark decided from queue status {self.status}; "
+                f"expected one of {sorted(allowed_from)}"
+            )
+        self._transition("decided")
         self._data["decided_at"] = _utc_now()
         self._data["decision_id"] = str(decision_id)
         self.validate()
 
     def mark_granted(self, grant_id: str) -> None:
+        if requires_reopen_for_grant(self.status):
+            raise ScopeValidationError(
+                "Cannot grant from expired status; reopen queue entry first (expired -> open)"
+            )
         if self.status != "decided":
             raise ScopeValidationError(
                 f"Cannot mark granted from queue status {self.status}; expected decided"
             )
-        self._data["status"] = "granted"
+        self._transition("granted")
         self._data["granted_at"] = _utc_now()
         self._data["grant_id"] = str(grant_id)
         self.validate()
@@ -149,10 +213,19 @@ class ReviewQueue:
     def close(self, *, reason: str = "") -> None:
         if self.status in TERMINAL_STATUSES:
             raise ScopeValidationError(f"Cannot close queue entry in status {self.status}")
-        self._data["status"] = "closed"
+        self._transition("closed")
         self._data["closed_at"] = _utc_now()
         if reason:
             self._data["close_reason"] = reason
+        self.validate()
+
+    def cancel(self, *, reason: str = "") -> None:
+        if self.status in TERMINAL_STATUSES:
+            raise ScopeValidationError(f"Cannot cancel queue entry in status {self.status}")
+        self._transition("cancelled")
+        self._data["cancelled_at"] = _utc_now()
+        if reason:
+            self._data["cancel_reason"] = reason
         self.validate()
 
     def complete(self) -> None:
@@ -173,13 +246,19 @@ class ReviewQueue:
             "created_at": self._data["created_at"],
             "due_at": self._data["due_at"],
             "assigned_at": self._data.get("assigned_at"),
+            "in_review_at": self._data.get("in_review_at"),
+            "needs_information_at": self._data.get("needs_information_at"),
+            "escalated_at": self._data.get("escalated_at"),
             "decided_at": self._data.get("decided_at"),
             "granted_at": self._data.get("granted_at"),
+            "expired_at": self._data.get("expired_at"),
             "closed_at": self._data.get("closed_at"),
             "overdue": self.is_overdue(),
             "reviewer": self._data.get("reviewer"),
+            "escalation_reviewer": self._data.get("escalation_reviewer"),
             "decision_id": self._data.get("decision_id"),
             "grant_id": self._data.get("grant_id"),
+            "escalated": self._data.get("escalated", False),
         }
 
 
@@ -209,8 +288,12 @@ def queue_metrics(queue_dir: str | Path | None = None) -> dict[str, int]:
 def aggregate_queue_status(queue_dir: str | Path | None = None) -> dict[str, Any]:
     queues = load_all_queues(queue_dir)
     metrics = queue_metrics(queue_dir)
+    status_counts: dict[str, int] = {}
+    for queue in queues:
+        status_counts[queue.status] = status_counts.get(queue.status, 0) + 1
     return {
         "queue_dir": str(Path(queue_dir) if queue_dir else DEFAULT_QUEUE_DIR),
         "entries": [queue.status_summary() for queue in queues],
+        "status_counts": status_counts,
         **metrics,
     }
