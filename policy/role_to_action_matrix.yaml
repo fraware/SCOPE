@@ -1,4 +1,4 @@
-version: scope-core-v0.5
+version: scope-core-v0.6
 matrix:
   A3_evidence_interpretation_consequential:
     required_roles:

@@ -1,4 +1,4 @@
-version: scope-core-v0.5
+version: scope-core-v0.6
 roles:
   domain_scientist:
     description: Reviews scientific plausibility, domain assumptions, and interpretation.
@@ -77,6 +77,8 @@ roles:
       - protocol_draft
       - protocol_diff_review
       - tool_permission_escalation
+      - single_validation_plan
+      - draft_recommendation
   clinical_reviewer:
     description: |
       Reviews patient-facing claims, diagnostic assertions, and clinical translation risk.
@@ -86,6 +88,9 @@ roles:
       - evidence_interpretation_only
       - draft_recommendation
       - publication_claim
+      - protocol_draft
+      - single_validation_plan
+      - hypothesis_discussion
   ethics_reviewer:
     description: Reviews human-subject, dual-use, or institutional ethics concerns.
     can_approve_scopes:
