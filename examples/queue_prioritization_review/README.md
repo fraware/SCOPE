@@ -1,6 +1,6 @@
 # Queue prioritization review (invalid reviewer)
 
-Scenario: queue prioritization requires `principal_investigator` or `lab_operations_lead`. A `protocol_owner` attempts approval — SCOPE must reject fail-closed.
+Scenario: queue prioritization (A7) requires `principal_investigator` or `lab_operations_lead`. A `protocol_owner` attempts approval — SCOPE must reject fail-closed.
 
 ## Run (expect failure)
 
@@ -20,3 +20,5 @@ scope decision submit \
 Expected: decision rejected with role authorization error.
 
 See `evals/scenarios/queue_prioritization_wrong_reviewer.json`.
+
+For v0.7 review queue workflow (10 states), see [docs/quality_metrics.md](../../docs/quality_metrics.md) and root README REST queue endpoints.
