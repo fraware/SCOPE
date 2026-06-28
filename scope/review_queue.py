@@ -10,6 +10,7 @@ from typing import Any
 
 from scope._version import __version__
 from scope.errors import ScopeValidationError
+from scope.file_lock import FileLock, lock_path_for
 from scope.schema_util import validate_artifact
 
 DEFAULT_QUEUE_DIR = Path(".scope/queues")
@@ -72,8 +73,11 @@ class ReviewQueue:
 
     @classmethod
     def load(cls, path: str | Path) -> ReviewQueue:
-        with Path(path).open(encoding="utf-8") as fh:
-            data = json.load(fh)
+        target = Path(path)
+        lock = FileLock(lock_path_for(target))
+        with lock.hold():
+            with target.open(encoding="utf-8") as fh:
+                data = json.load(fh)
         queue = cls(data)
         queue.validate()
         return queue
@@ -98,9 +102,11 @@ class ReviewQueue:
         else:
             target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
-        with target.open("w", encoding="utf-8") as fh:
-            json.dump(self._data, fh, indent=2, sort_keys=True)
-            fh.write("\n")
+        lock = FileLock(lock_path_for(target))
+        with lock.hold():
+            with target.open("w", encoding="utf-8") as fh:
+                json.dump(self._data, fh, indent=2, sort_keys=True)
+                fh.write("\n")
         return target
 
     def assign(self, reviewer: dict[str, Any]) -> None:
