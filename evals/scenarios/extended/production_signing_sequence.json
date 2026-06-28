@@ -19,5 +19,6 @@
     "rationale": "signed approval"
   },
   "expected_scope": "protocol_draft",
-  "sign_before_grant": true
+  "sign_before_grant": true,
+  "expect_signing_assurance_level": "SAL1"
 }
