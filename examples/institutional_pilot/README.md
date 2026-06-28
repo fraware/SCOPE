@@ -1,6 +1,6 @@
 # Institutional Pilot Examples
 
-Sample artifacts for SCOPE v0.4 pilot workshops. See docs/institutional_pilot_guide.md.
+Sample artifacts for SCOPE v0.5.1 pilot workshops. See docs/institutional_pilot_guide.md.
 
 | File | Description |
 |------|-------------|
