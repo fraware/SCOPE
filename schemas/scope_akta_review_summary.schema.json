@@ -8,9 +8,11 @@
     "decision_path",
     "grant_path",
     "approved_scope",
+    "requested_scope",
     "adapter_contract_version",
     "identity_assurance_level",
-    "signing_assurance_level"
+    "signing_assurance_level",
+    "production_mode"
   ],
   "properties": {
     "status": { "type": "string" },
@@ -40,6 +42,7 @@
       "type": "string",
       "enum": ["SAL0", "SAL1", "SAL2", "SAL3", "SAL4"]
     },
+    "production_mode": { "type": "boolean" },
     "scope_trust_root_hash": {
       "type": "string",
       "pattern": "^sha256:[a-f0-9]{64}$"
