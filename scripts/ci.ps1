@@ -40,4 +40,4 @@ Invoke-Pip install --editable ".[dev]"
 ruff check scope tests evals adapters
 mypy scope
 pytest
-python evals/run_review_cases.py
+python evals/run_review_cases.py --extended
