@@ -1,5 +1,5 @@
 {
-  "manifest_version": "pcs-v0.4",
+  "manifest_version": "pcs-v0.5",
   "artifacts": [
     "scope_packet.json",
     "scope_decision.json",
@@ -17,5 +17,6 @@
     "packet_id": "SCOPE-PKT-CONTRACT",
     "decision_id": "SCOPE-DEC-CONTRACT",
     "grant_id": "SCOPE-GRANT-CONTRACT"
-  }
+  },
+  "scope_trust_root_hash": "sha256:39a9d6fbfa046b6e066baa220ed1a7d42f1cb61aed6cd894dd4e06219819a8cc"
 }

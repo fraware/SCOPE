@@ -40,7 +40,26 @@
     },
     "constraints": { "type": "object" },
     "expiration": { "type": "object" },
-    "provenance": { "type": "object" },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "scope_policy_version",
+        "scope_policy_hash",
+        "reviewer_key_registry_version",
+        "reviewer_key_registry_hash",
+        "scope_trust_root_hash"
+      ],
+      "properties": {
+        "scope_policy_version": { "type": "string" },
+        "scope_policy_hash": { "type": "string", "pattern": "^sha256:" },
+        "akta_policy_hash": { "type": ["string", "null"] },
+        "reviewer_role_policy_hash": { "type": "string", "pattern": "^sha256:" },
+        "reviewer_key_registry_version": { "type": "string" },
+        "reviewer_key_registry_hash": { "type": "string", "pattern": "^sha256:" },
+        "scope_trust_root_hash": { "type": "string", "pattern": "^sha256:" }
+      },
+      "additionalProperties": true
+    },
     "grant_hash": { "type": "string", "pattern": "^sha256:" }
   },
   "additionalProperties": true
