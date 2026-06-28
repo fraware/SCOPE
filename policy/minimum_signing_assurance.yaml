@@ -1,0 +1,10 @@
+version: scope-core-v0.7
+minimum_level: SAL1
+high_risk_minimum_level: SAL3
+enforce_in_development: false
+high_risk_scopes:
+  - robot_queue_submission
+  - tool_permission_escalation
+  - publication_claim
+  - active_protocol_update
+  - execution_payload_preparation
