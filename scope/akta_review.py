@@ -222,6 +222,7 @@ def run_akta_review(
         "adapter_contract_version": AKTA_REVIEW_CONTRACT_VERSION,
         "identity_assurance_level": provenance.get("identity_assurance_level", "IAL0"),
         "signing_assurance_level": provenance.get("signing_assurance_level", "SAL0"),
+        "production_mode": is_production_mode(),
         "scope_trust_root_hash": provenance.get("scope_trust_root_hash"),
     }
     if queue_entry is not None:
