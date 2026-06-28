@@ -26,7 +26,8 @@ Required fields:
   "requested_scope": "...",
   "adapter_contract_version": "scope-akta-review-v0.7",
   "identity_assurance_level": "IAL0",
-  "signing_assurance_level": "SAL1"
+  "signing_assurance_level": "SAL1",
+  "production_mode": false
 }
 ```
 
