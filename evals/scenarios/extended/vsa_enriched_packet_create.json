@@ -1,0 +1,23 @@
+{
+  "name": "vsa_enriched_packet_create",
+  "akta_record": {
+    "record_id": "AKTA-EVAL-VSA",
+    "scientific_action_type": "A5_protocol_modification"
+  },
+  "akta_trigger": {
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A5_protocol_modification",
+    "requested_action": "draft_protocol",
+    "requested_tool": "protocol_editor.draft_change",
+    "requested_scope": "protocol_draft"
+  },
+  "vsa_report_path": "adapters/vsa/examples/scientific_report_example.json",
+  "reviewer": {"reviewer_id": "po1", "role": "protocol_owner"},
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "protocol_draft",
+    "rationale": "VSA evidence supports draft only"
+  },
+  "expected_scope": "protocol_draft",
+  "expected_vsa_report_id": "VSA-EXAMPLE-001"
+}
