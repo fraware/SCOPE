@@ -61,6 +61,9 @@
       "type": "object",
       "additionalProperties": true
     },
+    "escalation_reason": { "type": "string" },
+    "escalation_actor_id": { "type": "string" },
+    "information_received_at": { "type": "string" },
     "packet_snapshot": { "type": "object" }
   },
   "additionalProperties": true
