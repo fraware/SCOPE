@@ -18,8 +18,6 @@
 
 </div>
 
-Repository: [https://github.com/fraware/SCOPE](https://github.com/fraware/SCOPE)
-
 ---
 
 ## Why SCOPE exists
