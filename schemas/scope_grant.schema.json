@@ -47,7 +47,12 @@
         "scope_policy_hash",
         "reviewer_key_registry_version",
         "reviewer_key_registry_hash",
-        "scope_trust_root_hash"
+        "scope_trust_root_hash",
+        "identity_assurance_level",
+        "identity_source",
+        "role_resolution_source",
+        "signing_assurance_level",
+        "authority_checks"
       ],
       "properties": {
         "scope_policy_version": { "type": "string" },
@@ -56,7 +61,46 @@
         "reviewer_role_policy_hash": { "type": "string", "pattern": "^sha256:" },
         "reviewer_key_registry_version": { "type": "string" },
         "reviewer_key_registry_hash": { "type": "string", "pattern": "^sha256:" },
-        "scope_trust_root_hash": { "type": "string", "pattern": "^sha256:" }
+        "scope_trust_root_hash": { "type": "string", "pattern": "^sha256:" },
+        "identity_assurance_level": {
+          "type": "string",
+          "enum": ["IAL0", "IAL1", "IAL2", "IAL3", "IAL4"]
+        },
+        "identity_source": {
+          "type": "string",
+          "enum": ["caller_json", "local_signed_key", "oidc_jwt"]
+        },
+        "role_resolution_source": {
+          "type": "string",
+          "enum": ["caller_supplied", "local_signed_key", "oidc_verified", "org_rbac"]
+        },
+        "delegation_id": { "type": "string" },
+        "identity_claim_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "signing_assurance_level": {
+          "type": "string",
+          "enum": ["SAL0", "SAL1", "SAL2", "SAL3", "SAL4"]
+        },
+        "authority_checks": {
+          "type": "object",
+          "required": [
+            "rbac_enforced",
+            "rbac_role_valid",
+            "scope_role_valid",
+            "scope_approval_valid",
+            "delegation_id"
+          ],
+          "properties": {
+            "rbac_enforced": { "type": "boolean" },
+            "rbac_role_valid": { "type": "boolean" },
+            "scope_role_valid": { "type": "boolean" },
+            "scope_approval_valid": { "type": "boolean" },
+            "delegation_id": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": true
     },
