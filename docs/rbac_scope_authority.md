@@ -53,3 +53,9 @@ Every decision and grant records explicit two-stage authority outcomes:
 ```
 
 When RBAC is disabled or identity is below IAL3, `rbac_enforced` and `rbac_role_valid` are `false` so auditors can distinguish skipped checks from passed checks. Active delegations populate `delegation_id` in both identity provenance and `authority_checks`.
+
+## Related documentation
+
+- [identity_assurance.md](identity_assurance.md) — IAL levels and provenance fields
+- [limitations.md](limitations.md) — RBAC scope and external IdP boundaries
+- [institutional_pilot_guide.md](institutional_pilot_guide.md) — pilot RBAC configuration
