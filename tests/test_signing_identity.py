@@ -90,7 +90,7 @@ def test_sign_enforces_reviewer_key_registry(tmp_path):
     registry_path.write_text(
         yaml.dump(
             {
-                "version": "scope-core-v0.4",
+                "version": "scope-core-v0.5",
                 "reviewers": {"rev1": expected_ref},
             }
         ),
