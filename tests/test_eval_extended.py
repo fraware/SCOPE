@@ -19,4 +19,4 @@ def test_extended_eval_scenarios_pass():
         env=env,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "12/12 scenarios passed" in result.stdout
+    assert "16/16 scenarios passed" in result.stdout

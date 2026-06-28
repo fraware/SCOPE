@@ -1,4 +1,4 @@
-"""Evaluation scenario runner for SCOPE v0.5."""
+"""Evaluation scenario runner for SCOPE v0.6."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 from scope import ScopeEngine
 from scope.errors import DecisionValidationError, RoleValidationError, ScopeValidationError
 from scope.signing import Ed25519Signer
+from tests.jwt_helpers import build_rs256_jwt, generate_rsa_keypair
 
 POLICY = ROOT / "policy"
 SCENARIOS_DIR = ROOT / "evals" / "scenarios"
@@ -101,6 +102,62 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
             if set(expected_roles) != set(actual):
                 return ScenarioResult(name, False, f"Roles mismatch: {actual} != {expected_roles}")
 
+        if scenario.get("auto_assign_queue"):
+            with tempfile.TemporaryDirectory() as qdir:
+                entry = engine.create_review_queue(packet, queue_dir=qdir, auto_assign=True)
+                reviewer = entry.to_artifact().get("reviewer") or {}
+                expected_id = scenario.get("expected_assigned_reviewer_id")
+                expected_role = scenario.get("expected_assigned_role")
+                if expected_id and reviewer.get("reviewer_id") != expected_id:
+                    return ScenarioResult(
+                        name,
+                        False,
+                        f"Assigned {reviewer.get('reviewer_id')} != {expected_id}",
+                    )
+                if expected_role and reviewer.get("role") != expected_role:
+                    return ScenarioResult(
+                        name,
+                        False,
+                        f"Role {reviewer.get('role')} != {expected_role}",
+                    )
+            return ScenarioResult(name, True, "Queue auto-assigned")
+
+        if scenario.get("use_oidc_identity"):
+            private_key, public_pem = generate_rsa_keypair()
+            pem_path = ROOT / ".scope" / "eval_oidc.pub"
+            pem_path.parent.mkdir(parents=True, exist_ok=True)
+            pem_path.write_bytes(public_pem)
+            os.environ["SCOPE_OIDC_PUBLIC_KEY_PEM"] = str(pem_path)
+            os.environ["SCOPE_OIDC_ISSUER"] = "https://idp.eval.test"
+            os.environ["SCOPE_OIDC_AUDIENCE"] = "scope-eval"
+            import time
+
+            token = build_rs256_jwt(
+                private_key,
+                {
+                    "sub": scenario.get("oidc_sub", "ds1"),
+                    "scope_role": scenario.get("oidc_role", "domain_scientist"),
+                    "iss": "https://idp.eval.test",
+                    "aud": "scope-eval",
+                    "exp": int(time.time()) + 3600,
+                },
+            )
+            decision = engine.submit_decision(
+                packet,
+                scenario["reviewer"],
+                scenario["decision"],
+                identity_token=token,
+            )
+            grant = engine.issue_grant(packet, decision)
+            approved = grant["authorization"]["approved_scope"]
+            if scenario.get("expected_scope") and approved != scenario["expected_scope"]:
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"Scope {approved} != {scenario['expected_scope']}",
+                )
+            return ScenarioResult(name, True, "OIDC identity path OK")
+
         if scenario.get("use_review_session"):
             return _run_session_scenario(engine, scenario, packet)
 
@@ -127,6 +184,24 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
                 decision = engine.sign_decision(decision, Ed25519Signer(key))
 
         grant = engine.issue_grant(packet, decision)
+
+        violation = scenario.get("record_runtime_violation")
+        if violation:
+            engine.record_runtime_violation(
+                grant["grant_id"],
+                tool=violation["tool"],
+                reason=violation["reason"],
+            )
+            report = engine.quality_report()
+            min_count = scenario.get("expected_violation_metric_min", 1)
+            actual = report["metrics"].get("runtime_violation_outcome_count", 0)
+            if actual < min_count:
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"Violation metric {actual} < {min_count}",
+                )
+
         approved = grant["authorization"]["approved_scope"]
         if scenario.get("expected_scope") and approved != scenario["expected_scope"]:
             return ScenarioResult(name, False, f"Scope {approved} != {scenario['expected_scope']}")
@@ -174,6 +249,10 @@ EXTENDED_SCENARIOS = [
     "domain_overlay_biosecurity_required.json",
     "vsa_enriched_packet_create.json",
     "production_signing_sequence.json",
+    "oidc_identity_mock_path.json",
+    "queue_auto_assign.json",
+    "runtime_violation_outcome_metric.json",
+    "biosecurity_mandatory_session.json",
 ]
 
 
