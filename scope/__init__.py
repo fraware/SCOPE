@@ -1,4 +1,4 @@
-"""Scoped Scientific Authorization Protocol (SCOPE) v0.4."""
+"""Scoped Scientific Authorization Protocol (SCOPE) v0.5."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from scope.packets import PacketBuilder
 from scope.policy import PolicyStore
 from scope.quality import analyze_ledger, emit_quality_warning, is_weak_evidence
 from scope.review_assignment import resolve_review_assignment
+from scope.review_queue import ReviewQueue, aggregate_queue_status, queue_metrics
 from scope.review_session import ReviewSession
 from scope.schema_util import load_schema
 from scope.session_store import MemorySessionStore, SessionStore, create_session_store
@@ -543,8 +544,79 @@ class ScopeEngine:
             grant, verifier, hash_field="grant_hash", signature_field="grant_signature"
         )
 
-    def quality_report(self) -> dict[str, Any]:
-        return analyze_ledger(self.ledger.events(), self.policy)
+    def quality_report(self, *, queue_dir: str | Path | None = None) -> dict[str, Any]:
+        report = analyze_ledger(self.ledger.events(), self.policy)
+        qm = queue_metrics(queue_dir)
+        report["metrics"]["open_queue_count"] = qm["open_queue_count"]
+        report["metrics"]["overdue_queue_count"] = qm["overdue_queue_count"]
+        report["summary"]["open_queue_count"] = qm["open_queue_count"]
+        report["summary"]["overdue_queue_count"] = qm["overdue_queue_count"]
+        return report
+
+    def create_review_queue(
+        self,
+        packet: dict[str, Any],
+        *,
+        queue_dir: str | Path | None = None,
+        sla_hours: int = 72,
+    ) -> ReviewQueue:
+        return ReviewQueue.create(
+            packet,
+            sla_hours=sla_hours,
+            queue_dir=queue_dir,
+            persist=queue_dir is not None,
+        )
+
+    def assign_review_queue(
+        self,
+        queue: ReviewQueue | str | Path,
+        reviewer: dict[str, Any],
+        *,
+        queue_path: str | Path | None = None,
+    ) -> ReviewQueue:
+        if isinstance(queue, ReviewQueue):
+            entry = queue
+            save_path = queue_path
+        else:
+            save_path = queue_path or queue
+            entry = ReviewQueue.load(save_path)
+        entry.assign(reviewer)
+        entry.save(save_path)
+        return entry
+
+    def decide_review_queue(
+        self,
+        queue: str | Path,
+        decision_id: str,
+    ) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.mark_decided(decision_id)
+        entry.save(queue)
+        return entry
+
+    def grant_review_queue(
+        self,
+        queue: str | Path,
+        grant_id: str,
+    ) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.mark_granted(grant_id)
+        entry.save(queue)
+        return entry
+
+    def close_review_queue(
+        self,
+        queue: str | Path,
+        *,
+        reason: str = "",
+    ) -> ReviewQueue:
+        entry = ReviewQueue.load(queue)
+        entry.close(reason=reason)
+        entry.save(queue)
+        return entry
+
+    def review_queue_status(self, *, queue_dir: str | Path | None = None) -> dict[str, Any]:
+        return aggregate_queue_status(queue_dir)
 
 
 __all__ = [
