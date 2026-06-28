@@ -2,23 +2,27 @@
   "name": "oidc_identity_mock_path",
   "akta_record": {
     "record_id": "AKTA-EVAL-OIDC",
-    "scientific_action_type": "A5_protocol_modification"
+    "scientific_action_type": "A4_recommendation"
   },
   "akta_trigger": {
     "akta_admissibility": "review_required",
-    "scientific_action_type": "A5_protocol_modification",
-    "requested_action": "draft_protocol",
-    "requested_tool": "protocol_editor.draft_change",
-    "requested_scope": "protocol_draft"
+    "scientific_action_type": "A4_recommendation",
+    "requested_action": "draft_recommendation",
+    "requested_tool": "recommendation.draft",
+    "requested_scope": "draft_recommendation"
   },
   "reviewer": {"reviewer_id": "legacy-id", "role": "wrong_role"},
   "decision": {
-    "type": "approve_narrower_scope",
-    "approved_scope": "protocol_draft",
-    "rationale": "OIDC identity override test"
+    "type": "approve",
+    "approved_scope": "draft_recommendation",
+    "rationale": "OIDC identity override with org RBAC (IAL3)"
   },
-  "expected_scope": "protocol_draft",
+  "expected_scope": "draft_recommendation",
   "use_oidc_identity": true,
-  "oidc_sub": "po1",
-  "oidc_role": "protocol_owner"
+  "oidc_sub": "ds1",
+  "oidc_role": "domain_scientist",
+  "enforce_rbac": true,
+  "expect_identity_assurance_level": "IAL3",
+  "expect_role_resolution_source": "org_rbac",
+  "expect_identity_source": "oidc_jwt"
 }
