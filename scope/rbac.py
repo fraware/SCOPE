@@ -33,26 +33,41 @@ def _member_roles(org_rbac: dict[str, Any], reviewer_id: str) -> set[str]:
     return roles
 
 
+def _delegation_records(
+    org_rbac: dict[str, Any],
+    reviewer_id: str,
+    *,
+    at: datetime | None = None,
+    active_only: bool = True,
+) -> list[dict[str, Any]]:
+    current = at or datetime.now(timezone.utc)
+    records: list[dict[str, Any]] = []
+    for delegation in org_rbac.get("delegations") or []:
+        if str(delegation.get("granted_to")) != reviewer_id:
+            continue
+        valid_until = delegation.get("valid_until")
+        expired = False
+        if valid_until:
+            try:
+                if current > _parse_ts(str(valid_until)):
+                    expired = True
+            except ValueError:
+                expired = True
+        if active_only and expired:
+            continue
+        record = dict(delegation)
+        record["_expired"] = expired
+        records.append(record)
+    return records
+
+
 def _active_delegations(
     org_rbac: dict[str, Any],
     reviewer_id: str,
     *,
     at: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    current = at or datetime.now(timezone.utc)
-    active: list[dict[str, Any]] = []
-    for delegation in org_rbac.get("delegations") or []:
-        if str(delegation.get("granted_to")) != reviewer_id:
-            continue
-        valid_until = delegation.get("valid_until")
-        if valid_until:
-            try:
-                if current > _parse_ts(str(valid_until)):
-                    continue
-            except ValueError:
-                continue
-        active.append(delegation)
-    return active
+    return _delegation_records(org_rbac, reviewer_id, at=at, active_only=True)
 
 
 def resolve_effective_roles(
@@ -69,6 +84,58 @@ def resolve_effective_roles(
         if role:
             roles.add(str(role))
     return roles
+
+
+def resolve_effective_roles_with_provenance(
+    reviewer_id: str,
+    requested_role: str,
+    policy_dir: str | Path,
+    *,
+    at: datetime | None = None,
+) -> dict[str, Any]:
+    """
+    Resolve effective roles and how the requested role was obtained.
+
+    Returns role_resolution_source: org_rbac | delegation | caller (not in org).
+    """
+    org_rbac = load_org_rbac(policy_dir)
+    direct = _member_roles(org_rbac, reviewer_id)
+    effective = set(direct)
+    delegation_id: str | None = None
+    delegation_expired = False
+    source = "caller"
+
+    if requested_role in direct:
+        source = "org_rbac"
+
+    all_delegations = _delegation_records(org_rbac, reviewer_id, at=at, active_only=False)
+    for delegation in all_delegations:
+        role = delegation.get("role")
+        if not role:
+            continue
+        role_str = str(role)
+        if delegation.get("_expired"):
+            if role_str == requested_role:
+                delegation_expired = True
+            continue
+        effective.add(role_str)
+        if role_str == requested_role and source != "org_rbac":
+            source = "delegation"
+            delegation_id = str(
+                delegation.get("delegation_id")
+                or delegation.get("delegate_reviewer_id")
+                or f"{delegation.get('granted_by')}->{reviewer_id}"
+            )
+
+    if requested_role in effective and source == "caller":
+        source = "org_rbac"
+
+    return {
+        "effective_roles": effective,
+        "role_resolution_source": source,
+        "delegation_id": delegation_id,
+        "delegation_expired": delegation_expired,
+    }
 
 
 def check_rbac_permission(
