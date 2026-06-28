@@ -1,0 +1,8 @@
+version: scope-core-v0.4
+high_severity:
+  - robot_queue.submit
+  - protocol_editor.update_active_protocol
+  - scientific_memory.import
+  - workflow.mutate_permissions
+policy_blocked_label: policy blocked
+all_tools_label: all tools blocked
