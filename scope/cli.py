@@ -277,8 +277,15 @@ def export_group() -> None:
 @click.option("--grant", required=True, type=click.Path(exists=True))
 @click.option("--out", required=True, type=click.Path())
 @click.option("--validate", is_flag=True, default=False)
-def export_pf(grant: str, out: str, validate: bool) -> None:
+@click.option(
+    "--live",
+    is_flag=True,
+    default=False,
+    help="Run PF-Core repo validator when configured.",
+)
+def export_pf(grant: str, out: str, validate: bool, live: bool) -> None:
     from adapters.pf_core.export_obligation import export_pf_obligation, validate_pf_export
+    from scope.external_contracts import validate_pf_export_live
 
     g = _load_json(grant)
     data = export_pf_obligation(g)
@@ -287,6 +294,11 @@ def export_pf(grant: str, out: str, validate: bool) -> None:
         schema = Path("schemas/pf_scope_obligation.schema.json")
         validate_pf_export(data, g, schema if schema.exists() else None)
         click.echo("PF export validated.")
+    if live:
+        ok, message = validate_pf_export_live(data, g)
+        click.echo(message)
+        if not ok and not message.startswith("Skipped:"):
+            raise click.ClickException(message)
     click.echo(f"PF-Core obligation -> {out}")
 
 
@@ -296,14 +308,44 @@ def export_pf(grant: str, out: str, validate: bool) -> None:
 @click.option("--grant", required=True, type=click.Path(exists=True))
 @click.option("--out", required=True, type=click.Path())
 @click.option("--validate", is_flag=True, default=False)
-def export_pcs(packet: str, decision: str, grant: str, out: str, validate: bool) -> None:
+@click.option(
+    "--live",
+    is_flag=True,
+    default=False,
+    help="Run PCS-Core repo validator when configured.",
+)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def export_pcs(
+    packet: str,
+    decision: str,
+    grant: str,
+    out: str,
+    validate: bool,
+    live: bool,
+    policy: str,
+) -> None:
     from adapters.pcs.export_artifact import export_pcs_artifact, validate_pcs_export
+    from scope.external_contracts import validate_pcs_export_live
+    from scope.policy import PolicyStore
 
-    export_pcs_artifact(_load_json(packet), _load_json(decision), _load_json(grant), out)
+    pol = PolicyStore.from_dir(policy)
+    export_pcs_artifact(
+        _load_json(packet),
+        _load_json(decision),
+        _load_json(grant),
+        out,
+        registry_version=pol.reviewer_key_registry_version,
+        registry_hash=pol.reviewer_key_registry_hash,
+    )
     if validate:
         schema = Path("schemas/pcs_scope_artifact.schema.json")
         validate_pcs_export(out, schema if schema.exists() else None)
         click.echo("PCS export validated.")
+    if live:
+        ok, message = validate_pcs_export_live(out)
+        click.echo(message)
+        if not ok and not message.startswith("Skipped:"):
+            raise click.ClickException(message)
     click.echo(f"PCS artifact -> {out}")
 
 
@@ -538,6 +580,155 @@ def session_status(
         session_path, packet, policy, session_id=session_id, session_store=store
     )
     click.echo(json.dumps(session.to_artifact(), indent=2))
+
+
+@review_group.group("queue")
+def queue_group() -> None:
+    """Review queue tracking (open, assigned, overdue)."""
+
+
+@queue_group.command("create")
+@click.option("--packet", required=True, type=click.Path(exists=True))
+@click.option("--out", required=True, type=click.Path())
+@click.option("--queue-dir", type=click.Path(), default=None, help="Directory for queue artifacts.")
+@click.option("--sla-hours", default=72, show_default=True, type=int)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def review_queue_create(
+    packet: str,
+    out: str,
+    queue_dir: str | None,
+    sla_hours: int,
+    policy: str,
+) -> None:
+    engine = _engine(policy, None)
+    entry = engine.create_review_queue(
+        _load_json(packet),
+        queue_dir=queue_dir,
+        sla_hours=sla_hours,
+    )
+    path = entry.save(out)
+    click.echo(f"Created review queue {entry.queue_id} -> {path}")
+
+
+@queue_group.command("assign")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option("--reviewer", required=True, type=click.Path(exists=True))
+def review_queue_assign(queue_path: str, reviewer: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.assign(_load_json(reviewer))
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("list")
+@click.option("--queue-dir", type=click.Path(), default=None)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def review_queue_list(queue_dir: str | None, policy: str) -> None:
+    engine = _engine(policy, None)
+    click.echo(json.dumps(engine.review_queue_status(queue_dir=queue_dir), indent=2))
+
+
+@queue_group.command("decide")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option("--decision-id", required=True)
+def review_queue_decide(queue_path: str, decision_id: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.mark_decided(decision_id)
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("grant")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option("--grant-id", required=True)
+def review_queue_grant(queue_path: str, grant_id: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.mark_granted(grant_id)
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("close")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option("--reason", default="")
+def review_queue_close(queue_path: str, reason: str) -> None:
+    from scope.review_queue import ReviewQueue
+
+    entry = ReviewQueue.load(queue_path)
+    entry.close(reason=reason)
+    entry.save(queue_path)
+    click.echo(json.dumps(entry.status_summary(), indent=2))
+
+
+@queue_group.command("status")
+@click.option("--queue", "queue_path", required=False, type=click.Path(exists=True))
+@click.option("--queue-dir", type=click.Path(), default=None)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def review_queue_status(
+    queue_path: str | None,
+    queue_dir: str | None,
+    policy: str,
+) -> None:
+    if queue_path:
+        from scope.review_queue import ReviewQueue
+
+        click.echo(json.dumps(ReviewQueue.load(queue_path).status_summary(), indent=2))
+        return
+    engine = _engine(policy, None)
+    click.echo(json.dumps(engine.review_queue_status(queue_dir=queue_dir), indent=2))
+
+
+@main.group("key")
+def key_group() -> None:
+    """Reviewer public key registry workflow."""
+
+
+@key_group.command("list")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def key_list(policy: str) -> None:
+    from scope.key_registry import verify_registry_integrity
+
+    click.echo(json.dumps(verify_registry_integrity(policy), indent=2))
+
+
+@key_group.command("register")
+@click.option("--reviewer-id", required=True)
+@click.option("--public-key", required=True, type=click.Path(exists=True))
+@click.option("--private-key", required=False, type=click.Path(exists=True), default=None)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def key_register(
+    reviewer_id: str,
+    public_key: str,
+    private_key: str | None,
+    policy: str,
+) -> None:
+    from scope.key_registry import register_reviewer_key
+
+    result = register_reviewer_key(
+        policy,
+        reviewer_id,
+        public_key,
+        private_key_path=private_key,
+    )
+    click.echo(json.dumps(result, indent=2))
+
+
+@key_group.command("verify-registry")
+@click.option("--decision", required=True, type=click.Path(exists=True))
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def key_verify_registry(decision: str, policy: str) -> None:
+    from scope.key_registry import verify_decision_against_registry
+
+    result = verify_decision_against_registry(_load_json(decision), policy)
+    click.echo(json.dumps(result, indent=2))
+    if result.get("signature_valid") is False:
+        raise click.ClickException("Decision signature invalid against registry public key")
 
 
 if __name__ == "__main__":

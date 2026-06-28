@@ -95,9 +95,15 @@ def extract_trigger_fields(trigger: dict[str, Any]) -> dict[str, Any]:
         "requested_tool": trigger.get("requested_tool"),
         "scientific_action_type": trigger.get("scientific_action_type"),
         "responsibility_level": trigger.get("responsibility_level"),
-        "akta_admissibility": trigger.get("akta_admissibility"),
+        "akta_admissibility": _first(
+            trigger.get("akta_admissibility"),
+            trigger.get("admissibility"),
+        ),
         "requested_scope": trigger.get("requested_scope"),
-        "review_route": trigger.get("review_scope"),
+        "review_route": _first(
+            trigger.get("review_route"),
+            trigger.get("review_scope"),
+        ),
         "akta_decision_reason": _first(
             trigger.get("decision_reason"),
             trigger.get("akta_decision_reason"),
@@ -108,8 +114,14 @@ def extract_trigger_fields(trigger: dict[str, Any]) -> dict[str, Any]:
         ),
         "scientific_context": trigger.get("scientific_context"),
         "review_artifacts": trigger.get("review_artifacts"),
-        "blocked_tools": _nested(trigger, "akta_constraints", "blocked_tools"),
-        "allowed_next_steps": _nested(trigger, "akta_constraints", "allowed_next_steps"),
+        "blocked_tools": _first(
+            _nested(trigger, "akta_constraints", "blocked_tools"),
+            trigger.get("blocked_tools"),
+        ),
+        "allowed_next_steps": _first(
+            _nested(trigger, "akta_constraints", "allowed_next_steps"),
+            trigger.get("allowed_next_steps"),
+        ),
     }
 
 

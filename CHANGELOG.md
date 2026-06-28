@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.5.0 (2026-06-28)
+
+Integration and lab-workflow release:
+
+- AKTA v0.4 trigger extraction: `admissibility`, `review_route`, nested and top-level constraints
+- Expanded evidence vocabulary with AKTA↔SCOPE alias documentation and weak-evidence warnings
+- Minimal review queue (`scope review queue create|assign|status`) persisted under `.scope/queues/`
+- Quality report metrics: `open_queue_count`, `overdue_queue_count`
+- Reviewer key registry CLI (`scope key register`, `scope key verify-registry`) with signing enforcement
+- PCS export includes `reviewer_public_key_ref`, `registry_version`, `registry_hash`
+- Optional live PF/PCS contract validation via `PF_CORE_REPO_PATH` / `PCS_CORE_REPO_PATH` (`--live` flag)
+- Documentation: evidence vocab mapping, key management, updated integration contracts
+
 ## v0.4.0 (2026-06-28)
 
 Comprehensive hardening release:

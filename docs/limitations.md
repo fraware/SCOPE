@@ -1,5 +1,13 @@
 # Limitations
 
+## Implemented in v0.5
+
+- Minimal review queue with open/assigned/decided/granted/closed lifecycle (CLI + REST + `.scope/queues/`)
+- Reviewer key registry workflow with `scope key list`, signing enforcement, and PCS registry metadata
+- AKTA v0.4 trigger field aliases (`admissibility`, `review_route`, constraint fallbacks)
+- AKTA evidence alias normalization at packet adapter boundary (`akta_evidence_state` metadata)
+- Optional live PF/PCS contract validation when sibling repos are configured
+
 ## Implemented in v0.4
 
 - Ed25519 signing on decisions and grants with production-mode grant enforcement
@@ -23,9 +31,9 @@
 - No real identity provider (IdP) binding; reviewer identity is caller-supplied
 - Local Ed25519 key signing only; no HSM or institutional key management
 - No external tamper-evident ledger; JSONL ledger is local and append-only
-- No persistent review queue database or workflow engine
+- Review queue is file-based JSON only; no workflow engine or web UI
 - No institutional RBAC beyond policy YAML role matrices
-- PF-Core and PCS validation is local schema/hash checking only
+- PF-Core and PCS default validation is local schema/hash checking; live repo validators are optional
 - Session store SQLite backend is single-node; not distributed
 - AKTA, PF-Core, PCS, and VSA live service integration requires external repos
 

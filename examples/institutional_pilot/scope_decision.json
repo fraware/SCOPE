@@ -1,12 +1,17 @@
 {
-  "confidence": {
-    "requires_second_review": false,
-    "reviewer_confidence": 0.5
+  "decision_id": "SCOPE-DEC-DF32F5",
+  "packet_id": "SCOPE-PKT-764195",
+  "decided_at": "2026-06-28T13:01:54Z",
+  "reviewer": {
+    "reviewer_id": "pilot_po",
+    "role": "protocol_owner",
+    "declared_expertise": [],
+    "conflict_declared": false
   },
-  "decided_at": "2026-06-28T07:18:09Z",
   "decision": {
-    "approved_scope": "protocol_draft",
+    "type": "approve_narrower_scope",
     "rationale": "Protocol drift scenario: draft only until validation completes.",
+    "approved_scope": "protocol_draft",
     "rejected_scope": [
       "protocol_diff_review",
       "single_validation_plan",
@@ -19,24 +24,25 @@
       "robot_queue_submission",
       "publication_claim",
       "scientific_memory_import"
-    ],
-    "type": "approve_narrower_scope"
+    ]
   },
-  "decision_hash": "sha256:90aa8ffc346a034c20f453b259e80ff2cc27a97ae20df09eaa24eb9128dc8e78",
-  "decision_id": "SCOPE-DEC-F0F177",
+  "confidence": {
+    "reviewer_confidence": 0.5,
+    "requires_second_review": false
+  },
   "expiration": {
+    "mode": "event_based",
     "expires_on": [
       "protocol_version_change",
       "evidence_state_change",
       "policy_version_change"
-    ],
-    "mode": "event_based"
+    ]
   },
-  "packet_id": "SCOPE-PKT-4DDEDC",
-  "reviewer": {
-    "conflict_declared": false,
-    "declared_expertise": [],
-    "reviewer_id": "reviewer_protocol_owner_drift",
-    "role": "protocol_owner"
+  "decision_hash": "sha256:9a82e2790f24eb14c7107f6504633c5982ae0fd5c53c31a6166969a1bb680b1d",
+  "provenance": {
+    "scope_policy_version": "scope-core-v0.5",
+    "scope_policy_hash": "sha256:6d850af29c454697422054796f7eb699f0f76dc73055b79464d7f759590fc4ee",
+    "reviewer_key_registry_version": "scope-core-v0.5",
+    "reviewer_key_registry_hash": "sha256:144b56c5c179ad048d50f25b076d0f5bb95d56dbd955ba6637dba2b9406f0b05"
   }
 }

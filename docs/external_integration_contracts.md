@@ -1,4 +1,4 @@
-# External Integration Contracts (v0.4)
+# External Integration Contracts (v0.5)
 
 Formal field-mapping contracts for AKTA, PF-Core, PCS, and VSA integrations. These contracts define the shapes SCOPE produces or consumes locally; external repositories must implement compatible endpoints or adapters.
 
@@ -11,10 +11,25 @@ Formal field-mapping contracts for AKTA, PF-Core, PCS, and VSA integrations. The
 | AKTA record | `schemas/akta_record_import.schema.json` | `record_id` or nested `classification.scientific_action_type` + `requested_transition.requested_tool` |
 | Review trigger | `schemas/akta_review_trigger_import.schema.json` | `scientific_action_type`, `requested_action`, `requested_tool` when record alone is insufficient |
 
+### AKTA v0.4 trigger aliases
+
+| SCOPE field | AKTA v0.4 source (priority order) |
+|-------------|-------------------------------------|
+| `akta_admissibility` | `akta_admissibility`, `admissibility` |
+| `review_route` | `review_route`, `review_scope` |
+| `blocked_tools` | `akta_constraints.blocked_tools`, top-level `blocked_tools` |
+| `allowed_next_steps` | `akta_constraints.allowed_next_steps`, top-level `allowed_next_steps` |
+| `requested_scope` | top-level `requested_scope` (explicit, wins over route promotion) |
+
+Golden fixtures:
+
+- Record: `adapters/akta/examples/akta_record_nested.json`
+- Trigger (v0.4): `adapters/akta/examples/akta_review_trigger_v04.json`
+
 ### Scope inference
 
 1. Explicit `requested_scope` on trigger wins (`scope_inference_source: akta_trigger`).
-2. Valid `review_scope` / `review_route` promoted when in policy hierarchy (`review_route_promoted`).
+2. Valid `review_route` / `review_scope` promoted when in policy hierarchy (`review_route_promoted`).
 3. Otherwise tool registry maps `requested_tool` to scope (`tool_registry`).
 
 ### Output (SCOPE packet)
@@ -25,12 +40,12 @@ Formal field-mapping contracts for AKTA, PF-Core, PCS, and VSA integrations. The
 | `source.review_trigger_id` | `trigger_id` |
 | `review_request.scientific_action_type` | `scientific_action_type` or `classification.scientific_action_type` |
 | `review_request.requested_tool` | `requested_tool` or `requested_transition.requested_tool` |
-| `review_request.akta_admissibility` | `akta_admissibility` or `decision.admissibility` |
-| `akta_constraints.blocked_tools` | `blocked_tools` or `decision.blocked_tools` |
-| `akta_constraints.allowed_next_steps` | `allowed_next_steps` or `decision.next_admissible_steps` |
+| `review_request.akta_admissibility` | `akta_admissibility` or `admissibility` or `decision.admissibility` |
+| `akta_constraints.blocked_tools` | nested or top-level trigger fields; record `blocked_tools` |
+| `akta_constraints.allowed_next_steps` | nested or top-level trigger fields; record steps |
 | `scientific_context.*` | flat fields or `scientific_context` object |
 
-Golden fixture: `adapters/akta/examples/akta_record_nested.json`.
+Evidence vocabulary mapping: [evidence_vocab_mapping.md](evidence_vocab_mapping.md).
 
 ## VSA import
 
@@ -78,6 +93,25 @@ Example: `adapters/vsa/examples/scientific_report_example.json`.
 
 Contract fixture: `tests/fixtures/contracts/pf_obligation_contract.json`.
 
+### Live validation (optional)
+
+When `PF_CORE_REPO_PATH` points to a PF-Core checkout, SCOPE can invoke a documented validator script from that repo:
+
+```bash
+export PF_CORE_REPO_PATH=/path/to/pf-core
+scope export pf --grant grant.json --out pf.json --validate --live
+```
+
+Candidate script paths (first match wins):
+
+- `scripts/validate_scope_obligation.py`
+- `tools/validate_scope_obligation.py`
+- `tests/fixtures/validate_scope_obligation.py`
+
+If the env var is unset or the path is missing, live validation **skips with an explicit message** (default remains local schema validation).
+
+Pytest: `@pytest.mark.live_contract` tests in `tests/test_live_contracts.py`.
+
 ## PCS export
 
 ### Output bundle
@@ -93,9 +127,31 @@ Directory containing:
 | `artifacts` | List of bundled filenames |
 | `hashes` | SHA-256 of each artifact (canonical JSON) |
 | `source` | `akta_record_id`, `packet_id`, `decision_id`, `grant_id` |
+| `reviewer_public_key_ref` | From signed decision when present |
+| `registry_version` | `reviewer_key_registry.yaml` version field |
+| `registry_hash` | SHA-256 of canonical registry YAML |
 | Optional `ledger_excerpt`, `quality_warnings`, signature fields |
 
 Contract fixture: `tests/fixtures/contracts/pcs_manifest_contract.json`.
+
+Key registry workflow: [key_management.md](key_management.md).
+
+### Live validation (optional)
+
+When `PCS_CORE_REPO_PATH` points to a PCS checkout:
+
+```bash
+export PCS_CORE_REPO_PATH=/path/to/pcs-core
+scope export pcs --packet p.json --decision d.json --grant g.json --out ./pcs --validate --live
+```
+
+Candidate script paths:
+
+- `scripts/validate_scope_artifact.py`
+- `tools/validate_scope_artifact.py`
+- `tests/fixtures/validate_scope_artifact.py`
+
+Skips explicitly when repo path absent.
 
 ## Review assignment
 
@@ -111,16 +167,27 @@ Resolved at packet create via `scope/review_assignment.py`:
 
 Schema: `schemas/review_assignment.schema.json`.
 
-## Version alignment (v0.4)
+## Review queue (v0.5)
+
+File-backed queue entries under `.scope/queues/` (override with `--queue-dir`).
+
+Schema: `schemas/scope_review_queue.schema.json`.
+
+CLI: `scope review queue create|assign|status`.
+
+Quality metrics: `open_queue_count`, `overdue_queue_count`.
+
+## Version alignment (v0.5)
 
 | Artifact | Version field | Expected value |
 |----------|---------------|----------------|
-| SCOPE packet | `packet_version` | `0.4.0` |
-| SCOPE grant | `grant_version` | `0.4.0` |
-| Quality report | `report_version` | `0.4` |
+| SCOPE packet | `packet_version` | `0.5.0` |
+| SCOPE grant | `grant_version` | `0.5.0` |
+| Quality report | `report_version` | `0.5` |
+| Review queue | `queue_version` | `0.5.0` |
 | PF obligation | `obligation_version` | `pf-core-v0.4` |
 | PCS manifest | `manifest_version` | `pcs-v0.4` |
-| Policy bundle | `version` in YAML | `scope-core-v0.4` |
+| Policy bundle | `version` in YAML | `scope-core-v0.5` |
 
 ## External repo dependencies
 
@@ -131,4 +198,4 @@ These integrations require live services or repositories not present in this rep
 - **PCS**: release pipeline ingestion and institutional signing workflows
 - **VSA**: live ScientificReport generation from validation pipelines
 
-Local adapters validate shapes and hashes; cross-repo end-to-end tests belong in each project's CI once APIs are available.
+Local adapters validate shapes and hashes by default. Cross-repo end-to-end tests run when env paths are configured (`tests/test_live_contracts.py`).

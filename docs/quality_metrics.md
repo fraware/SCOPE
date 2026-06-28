@@ -65,13 +65,22 @@ SCOPE measures whether review is meaningful through ledger-backed analytics.
 | `stale_grant_attempt` | Grant used after expiration |
 | `scope_violation_attempt` | Tool outside grant scope |
 
+## Review queue (v0.5)
+
+| Metric | Description |
+|--------|-------------|
+| `open_queue_count` | Queue entries in `open` or `assigned` status (file-backed `.scope/queues/`) |
+| `overdue_queue_count` | Open/assigned entries past `due_at` SLA timestamp |
+
+Queue status lifecycle: `open` → `assigned` → `decided` → `granted` (or `closed`).
+
 ## Generate report
 
 ```bash
 scope quality report --ledger logs/scope_events.jsonl --out report.json
 ```
 
-All metrics in `policy/quality_metrics.yaml` are implemented in v0.4 (`v0_4_status: implemented`).
+All metrics in `policy/quality_metrics.yaml` are implemented in v0.5 (`v0_4_status: implemented` for core metrics; `v0_5_status: implemented` for queue metrics).
 Thresholds are configured in the same file.
 
 ## Ledger events

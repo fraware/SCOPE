@@ -20,6 +20,8 @@ def export_pcs_artifact(
     *,
     ledger_events: list[dict[str, Any]] | None = None,
     quality_warnings: list[dict[str, str]] | None = None,
+    registry_version: str | None = None,
+    registry_hash: str | None = None,
 ) -> Path:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -61,6 +63,10 @@ def export_pcs_artifact(
             manifest[field] = decision[field]
         elif grant.get(field):
             manifest[field] = grant[field]
+    if registry_version:
+        manifest["registry_version"] = registry_version
+    if registry_hash:
+        manifest["registry_hash"] = registry_hash
 
     with (out / "release_manifest.json").open("w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2, sort_keys=True)

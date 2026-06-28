@@ -2,7 +2,7 @@
 
 Home: [https://github.com/fraware/SCOPE](https://github.com/fraware/SCOPE)
 
-SCOPE is the Scoped Scientific Authorization Protocol (v0.4).
+SCOPE is the Scoped Scientific Authorization Protocol (v0.5).
 
 AKTA can decide that an AI-shaped scientific action requires review or authorization. SCOPE turns that decision into a structured review packet, assigns the right reviewer role, captures a scoped decision, emits a bounded grant, enforces expiration, and produces artifacts that can be verified and packaged.
 
@@ -113,13 +113,48 @@ See [docs/trusted_boundary.md](docs/trusted_boundary.md) for trust assumptions.
 ### Export and quality
 
 ```bash
-scope export pf --grant /tmp/grant.json --out /tmp/pf_obligation.json --validate
+scope export pf --grant /tmp/grant.json --out /tmp/pf_obligation.json --validate --live
 
 scope export pcs --packet /tmp/packet.json --decision /tmp/decision.json \
-  --grant /tmp/grant.json --out /tmp/pcs_bundle --validate
+  --grant /tmp/grant.json --out /tmp/pcs_bundle --validate --live
 
 scope quality report --ledger /tmp/scope_events.jsonl --out /tmp/quality_report.json
 ```
+
+Set `PF_CORE_REPO_PATH` or `PCS_CORE_REPO_PATH` to sibling repo roots for optional live contract validation (`--live`). When unset, validation skips with an explicit message.
+
+### Review queue
+
+```bash
+scope review queue create --packet /tmp/packet.json --out /tmp/queue.json \
+  --queue-dir .scope/queues
+
+scope review queue assign --queue /tmp/queue.json \
+  --reviewer examples/protocol_change_review/reviewer_protocol_owner.json
+
+scope review queue status --queue-dir .scope/queues
+
+scope review queue list --queue-dir .scope/queues
+
+scope review queue decide --queue /tmp/queue.json --decision-id SCOPE-DEC-XXXXXX
+
+scope review queue grant --queue /tmp/queue.json --grant-id SCOPE-GRANT-XXXXXX
+
+scope review queue close --queue /tmp/queue.json --reason withdrawn
+```
+
+### Key registry
+
+```bash
+scope key register --reviewer-id protocol_owner_1 \
+  --public-key keys/reviewer.pub --private-key keys/reviewer.pem
+
+scope key list
+
+scope key verify-registry --decision /tmp/signed_decision.json
+```
+
+See [docs/key_management.md](docs/key_management.md).
 
 ## REST API
 
@@ -130,6 +165,7 @@ uvicorn adapters.generic_rest.server:app --reload
 ```
 
 Set `SCOPE_LEDGER_PATH` for ledger-backed grant check/revoke/status.
+Set `SCOPE_POLICY_DIR` to override the default `policy/` directory (REST key registry).
 Set `SCOPE_SIGNING_KEY` for sign/verify endpoints.
 Set `SCOPE_SESSION_STORE` and `SCOPE_SESSION_DIR` for persistent review sessions (`json` or `sqlite`).
 Set `SCOPE_API_KEY` to require `Authorization: Bearer <key>` on all endpoints except `/v0/health`.
@@ -155,6 +191,15 @@ Grant check returns `{allowed, reason, code}` where `code` is `allowed`, `tool_b
 | GET | `/v0/grants/{id}/status` | Grant ledger status |
 | POST | `/v0/grants/sign` | Sign grant |
 | POST | `/v0/verify` | Verify signed artifact |
+| GET | `/v0/review-queue` | List queue entries and metrics |
+| POST | `/v0/review-queue` | Create queue entry |
+| POST | `/v0/review-queue/{id}/assign` | Assign reviewer |
+| POST | `/v0/review-queue/{id}/decide` | Mark decided |
+| POST | `/v0/review-queue/{id}/grant` | Mark granted |
+| POST | `/v0/review-queue/{id}/close` | Close without grant |
+| GET | `/v0/keys` | List key registry |
+| POST | `/v0/keys/register` | Register reviewer public key |
+| POST | `/v0/keys/verify-registry` | Verify decision against registry |
 | GET | `/v0/quality` | Quality report |
 | POST | `/v0/export/pf` | PF-Core obligation export |
 | POST | `/v0/export/pf/validate` | Validate PF export |
@@ -185,7 +230,7 @@ allowed = engine.check_grant_detailed(grant, "protocol_editor.draft_change", {"p
 
 - `scope/` - core protocol engine
 - `schemas/` - JSON schemas for artifacts
-- `policy/` - YAML policy files (`scope-core-v0.4`) and domain overlays
+- `policy/` - YAML policy files (`scope-core-v0.5`) and domain overlays
 - `adapters/` - AKTA, VSA, PF-Core, PCS, REST integrations
 - `examples/` - scenario fixtures
 - `evals/` - eight core evaluation scenarios (+ four extended with `--extended`)

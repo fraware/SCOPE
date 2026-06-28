@@ -9,7 +9,16 @@ from typing import Any
 from scope.policy import PolicyStore
 
 WEAK_EVIDENCE_STATES = frozenset(
-    {"E0_unknown", "E1_hypothesis", "E1_weak_signal", "E2_preliminary", ""}
+    {
+        "",
+        "E0_unknown",
+        "E0_no_evidence",
+        "E1_hypothesis",
+        "E1_weak_signal",
+        "E1_anecdotal_or_informal_observation",
+        "E2_preliminary",
+        "E2_preliminary_signal",
+    }
 )
 HIGH_RISK_ACTION_TYPES = frozenset(
     {
@@ -217,6 +226,8 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
         "narrowed_scope_rate": decision_types.get("approve_narrower_scope", 0) / total_decisions,
         "residual_block_preservation_rate": len(residual_preserved) / max(len(grants), 1),
         "review_queue_length": max(len(packets_created) - len(decisions), 0),
+        "open_queue_count": 0,
+        "overdue_queue_count": 0,
         "median_time_to_decision": (
             statistics.median(packet_decision_times) if packet_decision_times else None
         ),
@@ -238,7 +249,7 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
     by_action_type = _by_action_type(decisions, stale)
 
     return {
-        "report_version": "0.4",
+        "report_version": "0.5",
         "policy_version": policy.version,
         "summary": {
             "total_decisions": len(decisions),

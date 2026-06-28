@@ -115,7 +115,37 @@ class PolicyStore:
     @property
     def reviewer_key_registry(self) -> dict[str, str]:
         reviewers = self._reviewer_key_registry.get("reviewers") or {}
-        return {str(k): str(v) for k, v in reviewers.items()}
+        result: dict[str, str] = {}
+        for reviewer_id, entry in reviewers.items():
+            if isinstance(entry, dict):
+                ref = entry.get("public_key_ref")
+                if ref:
+                    result[str(reviewer_id)] = str(ref)
+            elif entry:
+                result[str(reviewer_id)] = str(entry)
+        return result
+
+    @property
+    def reviewer_key_registry_entries(self) -> dict[str, dict[str, Any]]:
+        reviewers = self._reviewer_key_registry.get("reviewers") or {}
+        entries: dict[str, dict[str, Any]] = {}
+        for reviewer_id, entry in reviewers.items():
+            if isinstance(entry, dict):
+                entries[str(reviewer_id)] = dict(entry)
+            else:
+                entries[str(reviewer_id)] = {"public_key_ref": str(entry)}
+        return entries
+
+    @property
+    def reviewer_key_registry_version(self) -> str:
+        return str(self._reviewer_key_registry.get("version", "unknown"))
+
+    @property
+    def reviewer_key_registry_hash(self) -> str:
+        digest = hashlib.sha256(
+            canonical_json(self._reviewer_key_registry).encode("utf-8")
+        ).hexdigest()
+        return f"sha256:{digest}"
 
     def get_domain_overlay(self, overlay_id: str | None) -> dict[str, Any] | None:
         if not overlay_id:

@@ -53,6 +53,6 @@ def test_full_akta_scope_pf_pcs_chain(tmp_path):
     validate_pcs_export(pcs_dir, SCHEMAS / "pcs_scope_artifact.schema.json")
 
     report = engine.quality_report()
-    assert report["report_version"] == "0.4"
+    assert report["report_version"] == "0.5"
     assert report["summary"]["total_grants"] >= 1
     assert "by_reviewer" in report

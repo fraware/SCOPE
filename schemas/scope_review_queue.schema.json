@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/scope_review_queue.schema.json",
+  "title": "SCOPE Review Queue Entry",
+  "type": "object",
+  "required": [
+    "queue_id",
+    "queue_version",
+    "packet_id",
+    "status",
+    "created_at",
+    "due_at"
+  ],
+  "properties": {
+    "queue_id": { "type": "string" },
+    "queue_version": { "type": "string" },
+    "packet_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["open", "assigned", "decided", "granted", "closed", "cancelled", "completed"]
+    },
+    "created_at": { "type": "string" },
+    "assigned_at": { "type": "string" },
+    "due_at": { "type": "string" },
+    "completed_at": { "type": "string" },
+    "decided_at": { "type": "string" },
+    "granted_at": { "type": "string" },
+    "closed_at": { "type": "string" },
+    "decision_id": { "type": "string" },
+    "grant_id": { "type": "string" },
+    "close_reason": { "type": "string" },
+    "reviewer": {
+      "type": "object",
+      "properties": {
+        "reviewer_id": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "packet_snapshot": { "type": "object" }
+  },
+  "additionalProperties": true
+}

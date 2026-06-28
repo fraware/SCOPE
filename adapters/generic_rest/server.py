@@ -1,4 +1,4 @@
-"""Optional FastAPI REST server for SCOPE v0.4."""
+"""Optional FastAPI REST server for SCOPE."""
 
 from __future__ import annotations
 
@@ -11,12 +11,13 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from scope import ScopeEngine, create_session_store
+from scope._version import __version__
 from scope.config import api_key
 from scope.errors import GrantValidationError, ScopeValidationError
 from scope.render import render_html, render_markdown
 from scope.signing import Ed25519PublicVerifier, Ed25519Signer
 
-app = FastAPI(title="SCOPE REST API", version="0.4.0")
+app = FastAPI(title="SCOPE REST API", version=__version__)
 _engine: ScopeEngine | None = None
 _SCHEMAS_DIR = Path(__file__).resolve().parents[2] / "schemas"
 
@@ -34,7 +35,8 @@ def _require_api_key(request: Request) -> None:
 def get_engine() -> ScopeEngine:
     global _engine
     if _engine is None:
-        policy = Path(__file__).resolve().parents[2] / "policy"
+        policy_env = os.environ.get("SCOPE_POLICY_DIR")
+        policy = Path(policy_env) if policy_env else Path(__file__).resolve().parents[2] / "policy"
         ledger = os.environ.get("SCOPE_LEDGER_PATH")
         store_type = os.environ.get("SCOPE_SESSION_STORE", "memory")
         session_dir = os.environ.get("SCOPE_SESSION_DIR")
@@ -125,6 +127,38 @@ class PcsExportRequest(BaseModel):
     run_validation: bool = False
 
 
+class ReviewQueueCreateRequest(BaseModel):
+    packet: dict[str, Any]
+    sla_hours: int = 72
+    queue_dir: str | None = None
+
+
+class ReviewQueueAssignRequest(BaseModel):
+    reviewer: dict[str, Any]
+
+
+class ReviewQueueDecideRequest(BaseModel):
+    decision_id: str
+
+
+class ReviewQueueGrantRequest(BaseModel):
+    grant_id: str
+
+
+class ReviewQueueCloseRequest(BaseModel):
+    reason: str = ""
+
+
+class KeyRegisterRequest(BaseModel):
+    reviewer_id: str
+    public_key_path: str
+    private_key_path: str | None = None
+
+
+class KeyVerifyRegistryRequest(BaseModel):
+    decision: dict[str, Any]
+
+
 def _http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, (ScopeValidationError, GrantValidationError)):
         return HTTPException(status_code=400, detail=str(exc))
@@ -135,7 +169,7 @@ def _http_error(exc: Exception) -> HTTPException:
 
 @app.get("/v0/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "version": "0.4.0"}
+    return {"status": "ok", "version": __version__}
 
 
 @app.post("/v0/packets", dependencies=[Depends(_require_api_key)])
@@ -281,6 +315,123 @@ def quality() -> dict[str, Any]:
     return get_engine().quality_report()
 
 
+@app.post("/v0/review-queue", dependencies=[Depends(_require_api_key)])
+def create_review_queue(req: ReviewQueueCreateRequest) -> dict[str, Any]:
+    engine = get_engine()
+    entry = engine.create_review_queue(
+        req.packet,
+        queue_dir=req.queue_dir,
+        sla_hours=req.sla_hours,
+    )
+    return entry.status_summary()
+
+
+@app.get("/v0/review-queue", dependencies=[Depends(_require_api_key)])
+def list_review_queue(queue_dir: str | None = None) -> dict[str, Any]:
+    return get_engine().review_queue_status(queue_dir=queue_dir)
+
+
+def _find_queue_path(queue_id: str, queue_dir: str | None = None) -> Path:
+    from scope.review_queue import ReviewQueue, list_queue_files
+
+    for path in list_queue_files(queue_dir):
+        entry = ReviewQueue.load(path)
+        if entry.queue_id == queue_id:
+            return path
+    raise HTTPException(status_code=404, detail=f"Queue {queue_id} not found")
+
+
+@app.post("/v0/review-queue/{queue_id}/assign", dependencies=[Depends(_require_api_key)])
+def assign_review_queue(
+    queue_id: str,
+    req: ReviewQueueAssignRequest,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().assign_review_queue(path, req.reviewer)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/decide", dependencies=[Depends(_require_api_key)])
+def decide_review_queue(
+    queue_id: str,
+    req: ReviewQueueDecideRequest,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().decide_review_queue(path, req.decision_id)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/grant", dependencies=[Depends(_require_api_key)])
+def grant_review_queue(
+    queue_id: str,
+    req: ReviewQueueGrantRequest,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().grant_review_queue(path, req.grant_id)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/close", dependencies=[Depends(_require_api_key)])
+def close_review_queue(
+    queue_id: str,
+    req: ReviewQueueCloseRequest,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().close_review_queue(path, reason=req.reason)
+    return ReviewQueue.load(path).status_summary()
+
+
+def _policy_dir() -> Path:
+    return Path(get_engine().policy.policy_dir)
+
+
+@app.get("/v0/keys", dependencies=[Depends(_require_api_key)])
+def list_keys() -> dict[str, Any]:
+    from scope.key_registry import verify_registry_integrity
+
+    return verify_registry_integrity(_policy_dir())
+
+
+@app.post("/v0/keys/register", dependencies=[Depends(_require_api_key)])
+def register_key(req: KeyRegisterRequest) -> dict[str, Any]:
+    from scope.key_registry import register_reviewer_key
+
+    try:
+        result = register_reviewer_key(
+            _policy_dir(),
+            req.reviewer_id,
+            req.public_key_path,
+            private_key_path=req.private_key_path,
+        )
+        global _engine
+        _engine = None
+        return result
+    except Exception as exc:
+        raise _http_error(exc) from exc
+
+
+@app.post("/v0/keys/verify-registry", dependencies=[Depends(_require_api_key)])
+def verify_key_registry(req: KeyVerifyRegistryRequest) -> dict[str, Any]:
+    from scope.key_registry import verify_decision_against_registry
+
+    try:
+        return verify_decision_against_registry(req.decision, _policy_dir())
+    except Exception as exc:
+        raise _http_error(exc) from exc
+
+
 @app.post("/v0/export/pf", dependencies=[Depends(_require_api_key)])
 def export_pf(grant: dict[str, Any]) -> dict[str, Any]:
     from adapters.pf_core.export_obligation import export_pf_obligation
@@ -312,6 +463,8 @@ def export_pcs(req: PcsExportRequest) -> dict[str, str]:
         tmp,
         ledger_events=engine.ledger.events(),
         quality_warnings=engine.quality_report().get("warnings", []),
+        registry_version=engine.policy.reviewer_key_registry_version,
+        registry_hash=engine.policy.reviewer_key_registry_hash,
     )
     if req.run_validation:
         schema = _SCHEMAS_DIR / "pcs_scope_artifact.schema.json"
@@ -332,6 +485,8 @@ def validate_pcs_export_endpoint(body: dict[str, Any]) -> dict[str, str]:
         tmp,
         ledger_events=engine.ledger.events(),
         quality_warnings=engine.quality_report().get("warnings", []),
+        registry_version=engine.policy.reviewer_key_registry_version,
+        registry_hash=engine.policy.reviewer_key_registry_hash,
     )
     schema = _SCHEMAS_DIR / "pcs_scope_artifact.schema.json"
     validate_pcs_export(tmp, schema if schema.exists() else None)

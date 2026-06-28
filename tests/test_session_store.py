@@ -154,7 +154,7 @@ def test_sqlite_store_exists(tmp_path):
 def _minimal_session_artifact(session_id: str = "SCOPE-SESS-X") -> dict:
     return {
         "session_id": session_id,
-        "session_version": "0.4.0",
+        "session_version": "0.5.0",
         "packet_id": "P1",
         "scientific_action_type": "A6_experimental_planning",
         "quorum_policy": {"mode": "require_all", "required_roles": ["domain_scientist"]},

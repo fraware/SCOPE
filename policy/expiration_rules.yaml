@@ -1,4 +1,4 @@
-version: scope-core-v0.4
+version: scope-core-v0.5
 default_expiration:
   protocol_draft:
     expires_after:
