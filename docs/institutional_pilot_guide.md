@@ -1,6 +1,15 @@
 # Institutional Pilot Guide
 
-This guide supports workshop, funder, and lab pilots of SCOPE v0.4 alongside AKTA.
+This guide supports workshop, funder, and lab pilots of SCOPE v0.6 alongside AKTA.
+
+## v0.6 institutional additions
+
+- OIDC/JWT reviewer identity: `scope identity verify-token`, `--identity-token` on decisions
+- Signing providers: `--signing-provider env|registry|local`
+- Org RBAC: `policy/org_rbac.yaml`, `--enforce-rbac` / `SCOPE_ENFORCE_RBAC=true`
+- Review queue auto-assign, SLA escalation, static dashboard
+- Runtime violation ledger loop: `scope ledger record-violation`
+- Session replication: `scope review session replicate --source --dest`
 
 ## Pilot posture
 
