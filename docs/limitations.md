@@ -75,4 +75,4 @@ SCOPE does not replace AKTA, PF-Core, VSA, PCS, IRB, biosafety, EHS, or legal co
 
 ## Roadmap
 
-See CHANGELOG for future plans: HSM-backed signing, authoritative remote ledger, interactive review UI, and enterprise directory RBAC sync.
+See [CHANGELOG](../CHANGELOG.md) for release history and future plans: HSM-backed signing (SAL4 interface present), authoritative remote ledger, interactive review UI, and enterprise directory RBAC sync.
