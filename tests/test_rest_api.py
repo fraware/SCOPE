@@ -36,7 +36,7 @@ def test_health(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
-    assert body["version"] == "0.2.0"
+    assert body["version"] == "0.4.0"
 
 
 def test_packet_create_and_validate(client):
@@ -82,6 +82,7 @@ def test_decision_grant_check_flow(client):
         },
     ).json()
     assert check["allowed"] is True
+    assert check["code"] == "allowed"
 
 
 def test_grant_revoke_and_status(client, tmp_path, monkeypatch):
@@ -247,12 +248,89 @@ def test_sign_and_verify(client, tmp_path, monkeypatch):
     assert verify.json()["valid"] is True
 
 
+def test_rest_public_key_verify(client, tmp_path):
+    from scope.signing import Ed25519Signer
+
+    key = tmp_path / "reviewer.pem"
+    pub = tmp_path / "reviewer.pub"
+    Ed25519Signer.generate_keypair(key, pub)
+
+    packet = client.post("/v0/packets", json=_packet_payload()).json()
+    decision = client.post(
+        "/v0/decisions",
+        json={
+            "packet": packet,
+            "reviewer": _load("reviewer_protocol_owner.json"),
+            "decision": _load("decision.json"),
+        },
+    ).json()
+    signed = client.post(
+        "/v0/decisions/sign",
+        json={"artifact": decision, "key_path": str(key)},
+    ).json()
+
+    verify = client.post(
+        "/v0/verify",
+        json={
+            "artifact": signed,
+            "artifact_type": "decision",
+            "public_key_path": str(pub),
+        },
+    )
+    assert verify.status_code == 200
+    assert verify.json()["valid"] is True
+
+
+def test_rest_persistent_session_store(client, tmp_path, monkeypatch):
+    session_dir = tmp_path / "sessions"
+    monkeypatch.setenv("SCOPE_SESSION_STORE", "json")
+    monkeypatch.setenv("SCOPE_SESSION_DIR", str(session_dir))
+    from adapters.generic_rest import server
+
+    server._engine = None
+
+    trigger = {
+        "akta_admissibility": "review_required",
+        "scientific_action_type": "A6_experimental_planning",
+        "requested_action": "plan_validation",
+        "requested_tool": "experiment_planner.create_validation_plan",
+        "requested_scope": "single_validation_plan",
+    }
+    record = {"record_id": "AKTA-REST-SESS", "scientific_action_type": "A6_experimental_planning"}
+    packet = client.post(
+        "/v0/packets",
+        json={"akta_record": record, "akta_trigger": trigger},
+    ).json()
+
+    session = client.post("/v0/review-sessions", json={"packet": packet}).json()
+    session_id = session["session_id"]
+
+    vote = client.post(
+        f"/v0/review-sessions/{session_id}/votes",
+        json={
+            "packet": packet,
+            "reviewer": {"reviewer_id": "ds1", "role": "domain_scientist"},
+            "decision": {
+                "type": "approve_narrower_scope",
+                "approved_scope": "single_validation_plan",
+                "rationale": "ok",
+            },
+        },
+    )
+    assert vote.status_code == 200
+
+    server._engine = None
+    status = client.get(f"/v0/review-sessions/{session_id}")
+    assert status.status_code == 200
+    assert len(status.json()["votes"]) == 1
+
+
 def test_quality_endpoint(client):
     resp = client.get("/v0/quality")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["report_version"] == "0.2"
-    assert body["policy_version"] == "scope-core-v0.2"
+    assert body["report_version"] == "0.4"
+    assert body["policy_version"] == "scope-core-v0.4"
     assert "metrics" in body
     assert "warnings" in body
 
@@ -264,3 +342,64 @@ def test_drift_example_packet(client):
     }
     packet = client.post("/v0/packets", json=payload).json()
     assert packet["review_request"]["requested_scope"] == "protocol_draft"
+
+
+def test_api_key_required_when_configured(client, monkeypatch):
+    monkeypatch.setenv("SCOPE_API_KEY", "test-secret-key")
+    from adapters.generic_rest import server
+
+    server._engine = None
+
+    health = client.get("/v0/health")
+    assert health.status_code == 200
+
+    denied = client.post("/v0/packets", json=_packet_payload())
+    assert denied.status_code == 401
+
+    authorized = client.post(
+        "/v0/packets",
+        json=_packet_payload(),
+        headers={"Authorization": "Bearer test-secret-key"},
+    )
+    assert authorized.status_code == 200
+
+
+def test_grant_check_returns_reason_and_code(client):
+    packet = client.post("/v0/packets", json=_packet_payload()).json()
+    decision = client.post(
+        "/v0/decisions",
+        json={
+            "packet": packet,
+            "reviewer": _load("reviewer_protocol_owner.json"),
+            "decision": _load("decision.json"),
+        },
+    ).json()
+    grant = client.post(
+        "/v0/grants",
+        json={"packet": packet, "decision": decision},
+    ).json()
+
+    blocked = client.post(
+        "/v0/grants/check",
+        json={
+            "grant": grant,
+            "requested_tool": "robot_queue.submit",
+            "context": _load("current_context.json"),
+        },
+    ).json()
+    assert blocked["allowed"] is False
+    assert blocked["code"] == "tool_blocked"
+    assert "blocked" in blocked["reason"].lower()
+
+    expired_ctx = {**_load("current_context.json"), "protocol_version": "protocol_v99"}
+    expired = client.post(
+        "/v0/grants/check",
+        json={
+            "grant": grant,
+            "requested_tool": "protocol_editor.draft_change",
+            "context": expired_ctx,
+        },
+    ).json()
+    assert expired["allowed"] is False
+    assert expired["code"] == "grant_expired"
+    assert expired["reason"]
