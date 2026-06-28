@@ -1,5 +1,15 @@
 # Limitations
 
+## Implemented in v0.7
+
+- Identity assurance levels (IAL0–IAL4) with provenance on decisions and grants
+- Two-stage institutional RBAC then SCOPE scope policy authority checks
+- Ledger delivery modes: best_effort, at_least_once (spool), fail_closed for high-risk events
+- Review queue workflow state machine with explicit forbidden transitions
+- Signing assurance levels (SAL0–SAL4) with minimum policy enforcement at grant issue
+- Frozen AKTA review output contract (`summary.json` schema, adapter version constant)
+- Policy bundle `scope-core-v0.7`
+
 ## Implemented in v0.6
 
 - OIDC/JWT identity verification with JWKS or static PEM (`scope identity verify-token`, `SCOPE_OIDC_ENABLED`)
@@ -52,7 +62,7 @@
 
 - No full enterprise IdP/SAML stack; OIDC/JWT RS256 foundation only
 - Registry `signing_key_path` is pilot-only; production HSM/KMS integration is operator-managed
-- Remote ledger sink is best-effort; authoritative tamper evidence remains local JSONL chain
+- Remote ledger sink supports delivery modes; authoritative tamper evidence remains local JSONL chain
 - Review queue dashboard is static HTML; no interactive workflow UI
 - RBAC is YAML-file based; no live directory sync
 - PF/PCS live repo validation still optional; mock validators used when sibling repos absent
