@@ -96,7 +96,16 @@ def extract_trigger_fields(trigger: dict[str, Any]) -> dict[str, Any]:
         "scientific_action_type": trigger.get("scientific_action_type"),
         "responsibility_level": trigger.get("responsibility_level"),
         "akta_admissibility": trigger.get("akta_admissibility"),
-        "requested_scope": _first(trigger.get("requested_scope"), trigger.get("review_scope")),
+        "requested_scope": trigger.get("requested_scope"),
+        "review_route": trigger.get("review_scope"),
+        "akta_decision_reason": _first(
+            trigger.get("decision_reason"),
+            trigger.get("akta_decision_reason"),
+        ),
+        "domain_overlay": _first(
+            trigger.get("domain_overlay"),
+            _nested(trigger, "scientific_context", "domain_overlay"),
+        ),
         "scientific_context": trigger.get("scientific_context"),
         "review_artifacts": trigger.get("review_artifacts"),
         "blocked_tools": _nested(trigger, "akta_constraints", "blocked_tools"),
