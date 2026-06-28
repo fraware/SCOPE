@@ -1,9 +1,12 @@
-"""Evaluation scenario runner for SCOPE v0.1."""
+"""Evaluation scenario runner for SCOPE v0.4."""
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,8 +17,11 @@ if str(ROOT) not in sys.path:
 
 from scope import ScopeEngine
 from scope.errors import DecisionValidationError, RoleValidationError, ScopeValidationError
+from scope.signing import Ed25519Signer
 
 POLICY = ROOT / "policy"
+SCENARIOS_DIR = ROOT / "evals" / "scenarios"
+EXTENDED_DIR = SCENARIOS_DIR / "extended"
 
 
 @dataclass
@@ -25,22 +31,78 @@ class ScenarioResult:
     message: str
 
 
-def _load(name: str) -> dict[str, Any]:
-    path = ROOT / "evals" / "scenarios" / name
+def _load(name: str, *, extended: bool = False) -> dict[str, Any]:
+    base = EXTENDED_DIR if extended else SCENARIOS_DIR
+    path = base / name
     with path.open(encoding="utf-8") as fh:
         return json.load(fh)
 
 
+def _run_session_scenario(
+    engine: ScopeEngine, scenario: dict[str, Any], packet: dict[str, Any]
+) -> ScenarioResult:
+    name = scenario["name"]
+    session = engine.create_review_session(packet)
+    decisions = []
+    for vote in scenario["session_votes"]:
+        decision = engine.submit_session_decision(
+            session,
+            packet,
+            vote["reviewer"],
+            vote["decision"],
+        )
+        decisions.append(decision)
+    grant = engine.issue_grant_from_session(session, packet, decisions)
+    approved = grant["authorization"]["approved_scope"]
+    if scenario.get("expected_scope") and approved != scenario["expected_scope"]:
+        return ScenarioResult(name, False, f"Scope {approved} != {scenario['expected_scope']}")
+    for tool in scenario.get("expected_allowed_tools", []):
+        if tool not in grant["authorization"]["allowed_tools"]:
+            return ScenarioResult(name, False, f"Missing allowed tool: {tool}")
+    for tool in scenario.get("expected_blocked_tools", []):
+        ctx = scenario.get("grant_check_context", {})
+        if engine.check_grant(grant, tool, ctx):
+            return ScenarioResult(name, False, f"Tool should be blocked: {tool}")
+    for tool in scenario.get("expected_allowed_check", []):
+        ctx = scenario.get("grant_check_context", {})
+        if not engine.check_grant(grant, tool, ctx):
+            return ScenarioResult(name, False, f"Tool should be allowed: {tool}")
+    return ScenarioResult(name, True, "OK")
+
+
 def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
+    if scenario.get("production_mode"):
+        os.environ["SCOPE_PRODUCTION_MODE"] = "true"
+    else:
+        os.environ.pop("SCOPE_PRODUCTION_MODE", None)
+
     engine = ScopeEngine.from_policy_dir(POLICY)
     name = scenario["name"]
     try:
-        packet = engine.create_packet(scenario["akta_record"], scenario["akta_trigger"])
+        vsa_path = scenario.get("vsa_report_path")
+        vsa_report = ROOT / vsa_path if vsa_path else None
+        packet = engine.create_packet(
+            scenario["akta_record"],
+            scenario["akta_trigger"],
+            vsa_report=vsa_report,
+        )
+        if scenario.get("expected_vsa_report_id"):
+            vsa = packet.get("review_artifacts", {}).get("vsa_report", {})
+            if vsa.get("report_id") != scenario["expected_vsa_report_id"]:
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"VSA report_id {vsa.get('report_id')} != {scenario['expected_vsa_report_id']}",
+                )
+
         expected_roles = scenario.get("expected_required_roles", [])
         if expected_roles:
             actual = packet["review_request"]["required_review_roles"]
             if set(expected_roles) != set(actual):
                 return ScenarioResult(name, False, f"Roles mismatch: {actual} != {expected_roles}")
+
+        if scenario.get("use_review_session"):
+            return _run_session_scenario(engine, scenario, packet)
 
         if scenario.get("expect_decision_error"):
             try:
@@ -56,6 +118,13 @@ def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
             if engine.policy.is_approval_decision(dt):
                 return ScenarioResult(name, False, "Expected no grant but got approval decision")
             return ScenarioResult(name, True, "Non-approval decision as expected")
+
+        if scenario.get("sign_before_grant"):
+            with tempfile.TemporaryDirectory() as tmp:
+                key = Path(tmp) / "reviewer.pem"
+                pub = Path(tmp) / "reviewer.pub"
+                Ed25519Signer.generate_keypair(key, pub)
+                decision = engine.sign_decision(decision, Ed25519Signer(key))
 
         grant = engine.issue_grant(packet, decision)
         approved = grant["authorization"]["approved_scope"]
@@ -100,17 +169,36 @@ SCENARIOS = [
     "robot_submission_scope_violation.json",
 ]
 
+EXTENDED_SCENARIOS = [
+    "a6_multi_review_session.json",
+    "domain_overlay_biosecurity_required.json",
+    "vsa_enriched_packet_create.json",
+    "production_signing_sequence.json",
+]
 
-def run_all() -> list[ScenarioResult]:
+
+def run_all(*, extended: bool = False) -> list[ScenarioResult]:
     results = []
     for fname in SCENARIOS:
         scenario = _load(fname)
         results.append(run_scenario(scenario))
+    if extended:
+        for fname in EXTENDED_SCENARIOS:
+            scenario = _load(fname, extended=True)
+            results.append(run_scenario(scenario))
     return results
 
 
 def main() -> int:
-    results = run_all()
+    parser = argparse.ArgumentParser(description="Run SCOPE evaluation scenarios")
+    parser.add_argument(
+        "--extended",
+        action="store_true",
+        help="Also run extended v0.4 scenarios (multi-review, signing, VSA, overlay)",
+    )
+    args = parser.parse_args()
+
+    results = run_all(extended=args.extended)
     failed = 0
     for r in results:
         status = "PASS" if r.passed else "FAIL"
