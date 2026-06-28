@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from adapters.generic_rest.server import app
+from scope._version import __version__
+from scope.signing import Ed25519Signer
 
 ROOT = Path(__file__).resolve().parent.parent
 EX = ROOT / "examples" / "protocol_change_review"
@@ -36,7 +39,7 @@ def test_health(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
-    assert body["version"] == "0.4.0"
+    assert body["version"] == __version__
 
 
 def test_packet_create_and_validate(client):
@@ -329,8 +332,8 @@ def test_quality_endpoint(client):
     resp = client.get("/v0/quality")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["report_version"] == "0.4"
-    assert body["policy_version"] == "scope-core-v0.4"
+    assert body["report_version"] == "0.5"
+    assert body["policy_version"] == "scope-core-v0.5"
     assert "metrics" in body
     assert "warnings" in body
 
@@ -403,3 +406,58 @@ def test_grant_check_returns_reason_and_code(client):
     assert expired["allowed"] is False
     assert expired["code"] == "grant_expired"
     assert expired["reason"]
+
+
+def test_review_queue_rest_endpoints(client, tmp_path, monkeypatch):
+    from adapters.generic_rest import server
+
+    monkeypatch.setenv("SCOPE_QUEUE_DIR", str(tmp_path / "queues"))
+    server._engine = None
+
+    packet = client.post("/v0/packets", json=_packet_payload()).json()
+    created = client.post(
+        "/v0/review-queue",
+        json={"packet": packet, "sla_hours": 24, "queue_dir": str(tmp_path / "queues")},
+    )
+    assert created.status_code == 200
+    queue_id = created.json()["queue_id"]
+
+    assigned = client.post(
+        f"/v0/review-queue/{queue_id}/assign",
+        json={"reviewer": {"reviewer_id": "r1", "role": "protocol_owner"}},
+        params={"queue_dir": str(tmp_path / "queues")},
+    )
+    assert assigned.status_code == 200
+    assert assigned.json()["status"] == "assigned"
+
+    listed = client.get("/v0/review-queue", params={"queue_dir": str(tmp_path / "queues")})
+    assert listed.status_code == 200
+    assert listed.json()["open_queue_count"] == 1
+
+
+def test_key_registry_rest_endpoints(client, tmp_path, monkeypatch):
+    from adapters.generic_rest import server
+
+    policy_copy = tmp_path / "policy"
+    shutil.copytree(ROOT / "policy", policy_copy)
+    monkeypatch.setenv("SCOPE_POLICY_DIR", str(policy_copy))
+    server._engine = None
+
+    pub = tmp_path / "reviewer.pub"
+    key = tmp_path / "reviewer.pem"
+    Ed25519Signer.generate_keypair(key, pub)
+
+    registered = client.post(
+        "/v0/keys/register",
+        json={
+            "reviewer_id": "rest_rev",
+            "public_key_path": str(pub),
+            "private_key_path": str(key),
+        },
+    )
+    assert registered.status_code == 200
+
+    listed = client.get("/v0/keys")
+    assert listed.status_code == 200
+    assert listed.json()["reviewer_count"] == 1
+
