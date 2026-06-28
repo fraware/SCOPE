@@ -37,7 +37,7 @@ def export_pcs_artifact(
             fh.write("\n")
 
     manifest: dict[str, Any] = {
-        "manifest_version": "pcs-v0.2",
+        "manifest_version": "pcs-v0.4",
         "artifacts": list(artifacts.keys()),
         "hashes": {name: compute_hash(data) for name, data in artifacts.items()},
         "source": {
@@ -56,6 +56,11 @@ def export_pcs_artifact(
             manifest["decision_signature"] = decision[field]
         if grant.get(field):
             manifest["grant_signature"] = grant[field]
+    for field in ("reviewer_public_key_ref", "signature_algorithm", "signed_payload_hash"):
+        if decision.get(field):
+            manifest[field] = decision[field]
+        elif grant.get(field):
+            manifest[field] = grant[field]
 
     with (out / "release_manifest.json").open("w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2, sort_keys=True)
