@@ -181,6 +181,20 @@ class ReviewQueueCloseRequest(BaseModel):
     reason: str = ""
 
 
+class ReviewQueueNeedsInformationRequest(BaseModel):
+    reason: str = ""
+
+
+class ReviewQueueCancelRequest(BaseModel):
+    reason: str = ""
+
+
+class ReviewQueueEscalateEntryRequest(BaseModel):
+    reviewer: dict[str, Any] | None = None
+    reason: str = ""
+    actor_id: str | None = None
+
+
 class KeyRegisterRequest(BaseModel):
     reviewer_id: str
     public_key_path: str
@@ -206,6 +220,16 @@ def _http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, KeyError):
         return HTTPException(status_code=404, detail=str(exc))
     return HTTPException(status_code=400, detail=str(exc))
+
+
+@app.exception_handler(ScopeValidationError)
+async def _scope_validation_handler(_request: Request, exc: ScopeValidationError) -> HTTPException:
+    raise _http_error(exc)
+
+
+@app.exception_handler(GrantValidationError)
+async def _grant_validation_handler(_request: Request, exc: GrantValidationError) -> HTTPException:
+    raise _http_error(exc)
 
 
 @app.get("/v0/health")
@@ -457,6 +481,104 @@ def close_review_queue(
 
     path = _find_queue_path(queue_id, queue_dir)
     get_engine().close_review_queue(path, reason=req.reason)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/in-review", dependencies=[Depends(_require_api_key)])
+def in_review_review_queue(
+    queue_id: str,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().in_review_review_queue(path)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post(
+    "/v0/review-queue/{queue_id}/needs-information",
+    dependencies=[Depends(_require_api_key)],
+)
+def needs_information_review_queue(
+    queue_id: str,
+    req: ReviewQueueNeedsInformationRequest,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().needs_information_review_queue(path, reason=req.reason)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post(
+    "/v0/review-queue/{queue_id}/information-received",
+    dependencies=[Depends(_require_api_key)],
+)
+def information_received_review_queue(
+    queue_id: str,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().information_received_review_queue(path)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/reopen", dependencies=[Depends(_require_api_key)])
+def reopen_review_queue(
+    queue_id: str,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().reopen_review_queue(path)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/expire", dependencies=[Depends(_require_api_key)])
+def expire_review_queue(
+    queue_id: str,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().expire_review_queue(path)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/cancel", dependencies=[Depends(_require_api_key)])
+def cancel_review_queue(
+    queue_id: str,
+    req: ReviewQueueCancelRequest,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().cancel_review_queue(path, reason=req.reason)
+    return ReviewQueue.load(path).status_summary()
+
+
+@app.post("/v0/review-queue/{queue_id}/escalate", dependencies=[Depends(_require_api_key)])
+def escalate_review_queue_entry(
+    queue_id: str,
+    req: ReviewQueueEscalateEntryRequest,
+    queue_dir: str | None = None,
+) -> dict[str, Any]:
+    from scope.review_queue import ReviewQueue
+
+    path = _find_queue_path(queue_id, queue_dir)
+    get_engine().escalate_review_queue_entry(
+        path,
+        req.reviewer,
+        reason=req.reason,
+        actor_id=req.actor_id,
+    )
     return ReviewQueue.load(path).status_summary()
 
 
