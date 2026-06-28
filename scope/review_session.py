@@ -8,6 +8,7 @@ from typing import Any
 
 from scope.errors import DecisionValidationError, GrantValidationError
 from scope.policy import PolicyStore
+from scope.schema_util import validate_artifact
 
 
 def _utc_now() -> str:
@@ -35,14 +36,19 @@ class ReviewSession:
         self.packet = packet
         self.policy = policy
         self.action_type = packet["review_request"]["scientific_action_type"]
-        self.required_roles = packet["review_request"]["required_review_roles"]
+        domain_overlay = packet.get("scientific_context", {}).get("domain_overlay")
+        self.required_roles = policy.get_required_roles(
+            self.action_type, domain_overlay=domain_overlay
+        )
         self.quorum_policy = quorum_policy or self._default_quorum()
         self.session_id = _new_session_id()
         self.votes: list[dict[str, Any]] = []
         self.created_at = _utc_now()
+        self.packet_snapshot = dict(packet)
 
     def _default_quorum(self) -> dict[str, Any]:
-        entry = self.policy.role_matrix.get(self.action_type, {})
+        domain_overlay = self.packet.get("scientific_context", {}).get("domain_overlay")
+        entry = self.policy.get_matrix_entry(self.action_type, domain_overlay=domain_overlay)
         if entry.get("require_all"):
             return {"mode": "require_all", "required_roles": self.required_roles}
         if entry.get("require_any"):
@@ -50,8 +56,29 @@ class ReviewSession:
         roles = self.required_roles[:1] or self.required_roles
         return {"mode": "require_all", "required_roles": roles}
 
-    def add_vote(self, decision: dict[str, Any]) -> dict[str, Any]:
-        vote = {
+    def add_vote(
+        self,
+        decision: dict[str, Any],
+        *,
+        replace: bool = False,
+    ) -> dict[str, Any]:
+        reviewer_id = decision["reviewer"]["reviewer_id"]
+        for index, existing in enumerate(self.votes):
+            if existing["reviewer_id"] == reviewer_id:
+                if not replace:
+                    raise DecisionValidationError(
+                        f"Duplicate vote from reviewer {reviewer_id}; "
+                        "each reviewer may vote once per session (use --replace-vote to supersede)"
+                    )
+                vote = self._build_vote(decision)
+                self.votes[index] = vote
+                return vote
+        vote = self._build_vote(decision)
+        self.votes.append(vote)
+        return vote
+
+    def _build_vote(self, decision: dict[str, Any]) -> dict[str, Any]:
+        return {
             "vote_id": _new_vote_id(),
             "session_id": self.session_id,
             "decision_id": decision["decision_id"],
@@ -60,9 +87,9 @@ class ReviewSession:
             "decision_type": decision["decision"]["type"],
             "approved_scope": decision["decision"].get("approved_scope"),
             "submitted_at": decision["decided_at"],
+            "reviewer_public_key_ref": decision.get("reviewer_public_key_ref"),
+            "decision_signature": decision.get("decision_signature"),
         }
-        self.votes.append(vote)
-        return vote
 
     @classmethod
     def from_artifact(
@@ -81,12 +108,15 @@ class ReviewSession:
         session.session_id = artifact["session_id"]
         session.votes = list(artifact.get("votes", []))
         session.created_at = artifact["created_at"]
+        session.packet_snapshot = artifact.get("packet_snapshot") or dict(packet)
         return session
 
     def to_artifact(self) -> dict[str, Any]:
-        return {
+        from scope._version import __version__
+
+        artifact = {
             "session_id": self.session_id,
-            "session_version": "0.2",
+            "session_version": __version__,
             "packet_id": self.packet["packet_id"],
             "scientific_action_type": self.action_type,
             "quorum_policy": self.quorum_policy,
@@ -94,7 +124,10 @@ class ReviewSession:
             "votes": self.votes,
             "created_at": self.created_at,
             "status": self.status(),
+            "packet_snapshot": self.packet_snapshot,
         }
+        validate_artifact(artifact, "scope_review_session.schema.json")
+        return artifact
 
     def status(self) -> str:
         if self._safety_veto():
@@ -168,7 +201,6 @@ class ReviewSession:
         if not approval_votes:
             raise GrantValidationError("No approving decisions for grant issuance")
 
-        # Use narrowest approved scope among votes
         scopes = [v["approved_scope"] for v in approval_votes if v.get("approved_scope")]
         if not scopes:
             raise GrantValidationError("Approving votes missing approved_scope")
