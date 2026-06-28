@@ -38,10 +38,11 @@ def test_all_deferred_metrics_present():
         "post_approval_protocol_drift_rate",
         "post_approval_evidence_downgrade_rate",
         "post_approval_runtime_violation_rate",
+        "ledger_delivery_failure_count",
     ]
     for key in expected:
         assert key in metrics, f"Missing metric: {key}"
-    assert report["report_version"] == "0.6"
+    assert report["report_version"] == "0.7"
 
 
 def test_low_evidence_warning_and_rate(tmp_path):
