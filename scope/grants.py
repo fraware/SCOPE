@@ -103,6 +103,8 @@ class GrantEngine:
                 "scope_policy_hash": self.policy.policy_hash,
                 "akta_policy_hash": extra.get("akta_policy_hash"),
                 "reviewer_role_policy_hash": self.policy.policy_hash,
+                "reviewer_key_registry_version": self.policy.reviewer_key_registry_version,
+                "reviewer_key_registry_hash": self.policy.reviewer_key_registry_hash,
             },
         }
         if contributing_signatures:

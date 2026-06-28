@@ -146,6 +146,12 @@ class DecisionEngine:
             )
 
         decision = attach_hash(decision, "decision_hash")
+        decision["provenance"] = {
+            "scope_policy_version": self.policy.version,
+            "scope_policy_hash": self.policy.policy_hash,
+            "reviewer_key_registry_version": self.policy.reviewer_key_registry_version,
+            "reviewer_key_registry_hash": self.policy.reviewer_key_registry_hash,
+        }
         sig_fields = (
             "decision_signature",
             "reviewer_public_key_ref",
