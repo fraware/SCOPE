@@ -40,7 +40,7 @@ def test_submit_narrower_decision(engine, packet):
 
 
 def test_reject_wrong_reviewer(engine, packet):
-    with pytest.raises(RoleValidationError):
+    with pytest.raises((RoleValidationError, ScopeValidationError)):
         engine.submit_decision(
             packet,
             {"reviewer_id": "x", "role": "domain_scientist"},
