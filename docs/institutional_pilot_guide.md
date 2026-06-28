@@ -1,6 +1,15 @@
 # Institutional Pilot Guide
 
-This guide supports workshop, funder, and lab pilots of SCOPE v0.6 alongside AKTA.
+This guide supports workshop, funder, and lab pilots of SCOPE v0.7 alongside AKTA.
+
+## v0.7 institutional additions
+
+- **Identity assurance (IAL0–IAL4)** on every decision and grant provenance
+- **Authority checks** with two-stage org RBAC then SCOPE scope policy separation
+- **Signing assurance (SAL0–SAL4)** with production minimums in `policy/minimum_signing_assurance.yaml`
+- **Ledger delivery modes**: `best_effort`, `at_least_once` (spool), `fail_closed` for high-risk events
+- **Review queue workflow** (10 states) with REST, CLI, and static HTML dashboard
+- **Frozen AKTA review contract** (`summary.json` schema, `scope akta review` primary path)
 
 ## v0.6 institutional additions
 
@@ -21,7 +30,7 @@ This guide supports workshop, funder, and lab pilots of SCOPE v0.6 alongside AKT
 ## Workshop flow (90 minutes)
 
 1. **AKTA evaluation** — Present a scientific action; AKTA emits record + review trigger
-2. **SCOPE packet** — `scope packet create` and `scope packet render` for reviewers
+2. **SCOPE packet** — `scope packet create` or `scope akta review` for one-shot packet/decision/grant
 3. **Review** — Reviewers read rendered packet (permits/denies, checklist, warnings)
 4. **Decision** — `scope decision submit` (unsigned OK in production mode)
 5. **Sign** — `scope decision sign` with pilot reviewer key
