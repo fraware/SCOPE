@@ -24,14 +24,18 @@ scope grant issue \
 scope grant check \
   --grant /tmp/stale_grant.json \
   --requested-tool protocol_editor.draft_change \
-  --context examples/stale_grant_attempt/current_context.json
+  --context examples/stale_grant_attempt/current_context.json \
+  --ledger /tmp/scope_events.jsonl
 
 scope grant check \
   --grant /tmp/stale_grant.json \
   --requested-tool protocol_editor.draft_change \
-  --context examples/stale_grant_attempt/stale_context.json
+  --context examples/stale_grant_attempt/stale_context.json \
+  --ledger /tmp/scope_events.jsonl
 ```
 
 Expected: first check ALLOWED; second check BLOCKED (stale after protocol version change).
 
 See `evals/scenarios/stale_grant_after_protocol_change.json`.
+
+Related: [protocol_drift/](../protocol_drift/) for AKTA one-shot entry point.
