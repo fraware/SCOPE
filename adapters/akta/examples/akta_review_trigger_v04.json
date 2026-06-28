@@ -1,0 +1,21 @@
+{
+  "trigger_id": "AKTA-REVTRIG-V04-001",
+  "akta_record_id": "AKTA-SAR-V04-001",
+  "akta_decision_id": "AKTA-DEC-V04-001",
+  "admissibility": "authorization_required",
+  "scientific_action_type": "A5_protocol_modification",
+  "requested_action": "update_active_protocol",
+  "requested_tool": "protocol_editor.update_active_protocol",
+  "responsibility_level": "R4_methodological_modification",
+  "review_route": "protocol_draft",
+  "requested_scope": "protocol_draft",
+  "akta_constraints": {
+    "blocked_tools": ["robot_queue.submit"],
+    "allowed_next_steps": ["submit_for_peer_review"]
+  },
+  "scientific_context": {
+    "domain": "materials",
+    "evidence_state": "E2_preliminary_signal",
+    "protocol_version": "protocol_v3"
+  }
+}
