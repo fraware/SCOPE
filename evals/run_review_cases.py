@@ -1,4 +1,4 @@
-"""Evaluation scenario runner for SCOPE v0.4."""
+"""Evaluation scenario runner for SCOPE v0.5."""
 
 from __future__ import annotations
 
@@ -194,7 +194,7 @@ def main() -> int:
     parser.add_argument(
         "--extended",
         action="store_true",
-        help="Also run extended v0.4 scenarios (multi-review, signing, VSA, overlay)",
+        help="Also run extended v0.5 scenarios (multi-review, signing, VSA, overlay)",
     )
     args = parser.parse_args()
 
