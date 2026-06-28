@@ -10,6 +10,8 @@
 6. **Human judgment must become machine-readable** — runtime can enforce decisions; release systems can audit them.
 7. **SCOPE does not certify safety** — grants authorize scoped transitions, not scientific correctness.
 
+See [scoped_scientific_authorization.md](scoped_scientific_authorization.md) and [limitations.md](limitations.md).
+
 ## Packet design
 
 Packets must not ask "Do you approve this?" They ask whether the reviewer approves a specific action under a specific scope with named blocked tools and expiration conditions.
