@@ -13,8 +13,23 @@ Review is not a checkbox. Review is a role, artifact, scope, expiration, and acc
 ```bash
 pip install -e ".[dev]"
 pytest
-python evals/run_review_cases.py
+python evals/run_review_cases.py --extended
 ```
+
+Full CI (lint, typecheck, tests, and 21 evaluation scenarios) runs via `scripts/ci.ps1` (Windows) or `scripts/ci.sh` (Linux).
+
+## Institutional pilot onboarding
+
+SCOPE v0.7 is ready for institutional pilots with identity assurance (IAL0–IAL4), authority provenance, signing assurance, ledger delivery modes, and the full review queue workflow.
+
+1. Read [docs/institutional_pilot_guide.md](docs/institutional_pilot_guide.md) for workshop flow and lab checklist
+2. Review sample artifacts in [examples/institutional_pilot/](examples/institutional_pilot/)
+3. Enable production mode and signing for grant enforcement: `SCOPE_PRODUCTION_MODE=true`
+4. Optional OIDC identity: set `SCOPE_OIDC_*` env vars and `SCOPE_ENFORCE_RBAC=true`
+5. Run extended evals locally: `python evals/run_review_cases.py --extended`
+6. See [docs/limitations.md](docs/limitations.md) for in-repo vs external boundaries
+
+Primary AKTA integration path: `scope akta review` (CLI) or `POST /v0/akta/review` (REST). See [docs/akta_review_contract.md](docs/akta_review_contract.md).
 
 ## CLI
 
@@ -35,6 +50,16 @@ scope akta review \
 Writes `scope_review_packet.json`, `scope_decision.json`, `scope_grant.json`, and `summary.json` to `--out-dir`.
 
 In production mode, also pass `--signing-key` (Ed25519 private key PEM) so the decision is signed before grant issue.
+
+### Identity assurance and authority checks (v0.7)
+
+Every decision and grant records provenance for reviewer identity and two-stage authority:
+
+- **Identity assurance (IAL0–IAL4)**: `identity_assurance_level`, `identity_source`, `role_resolution_source`, optional `delegation_id` and `identity_claim_hash`. Caller JSON alone is IAL0; a valid local signature without OIDC upgrades to IAL1. OIDC plus org RBAC reaches IAL3/IAL4.
+- **Authority checks**: explicit `authority_checks` block with `rbac_enforced`, `rbac_role_valid`, `scope_role_valid`, `scope_approval_valid`, and `delegation_id` so auditors can distinguish skipped RBAC from failed checks.
+- **Signing assurance (SAL0–SAL4)**: recorded on grant provenance at issue time; minimum levels enforced per scope in production.
+
+See [docs/identity_assurance.md](docs/identity_assurance.md) and [docs/rbac_scope_authority.md](docs/rbac_scope_authority.md).
 
 ### Packet workflow
 
@@ -213,9 +238,17 @@ Grant check returns `{allowed, reason, code}` where `code` is `allowed`, `tool_b
 | GET | `/v0/review-queue` | List queue entries and metrics |
 | POST | `/v0/review-queue` | Create queue entry |
 | POST | `/v0/review-queue/{id}/assign` | Assign reviewer |
+| POST | `/v0/review-queue/{id}/in-review` | Mark in review |
+| POST | `/v0/review-queue/{id}/needs-information` | Request more information |
+| POST | `/v0/review-queue/{id}/information-received` | Resume after information received |
+| POST | `/v0/review-queue/{id}/reopen` | Reopen expired or closed entry |
+| POST | `/v0/review-queue/{id}/expire` | Mark expired |
+| POST | `/v0/review-queue/{id}/cancel` | Cancel queue entry |
+| POST | `/v0/review-queue/{id}/escalate` | Escalate single queue entry |
 | POST | `/v0/review-queue/{id}/decide` | Mark decided |
 | POST | `/v0/review-queue/{id}/grant` | Mark granted |
 | POST | `/v0/review-queue/{id}/close` | Close without grant |
+| POST | `/v0/review-queue/escalate` | Scan and escalate overdue queues |
 | GET | `/v0/keys` | List key registry |
 | POST | `/v0/keys/register` | Register reviewer public key |
 | POST | `/v0/keys/verify-registry` | Verify decision against registry |
@@ -253,7 +286,7 @@ allowed = engine.check_grant_detailed(grant, "protocol_editor.draft_change", {"p
 - `policy/` - YAML policy files (`scope-core-v0.7`) and domain overlays
 - `adapters/` - AKTA, VSA, PF-Core, PCS, REST integrations
 - `examples/` - scenario fixtures
-- `evals/` - eight core evaluation scenarios (+ four extended with `--extended`)
+- `evals/` - eight core evaluation scenarios (+ thirteen extended with `--extended`, 21 total)
 - `tests/` - pytest suite
 - `docs/` - protocol documentation
 
