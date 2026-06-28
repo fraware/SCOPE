@@ -78,7 +78,7 @@ Example: `adapters/vsa/examples/scientific_report_example.json`.
 
 | Field | SCOPE grant source |
 |-------|-------------------|
-| `obligation_version` | Constant `pf-core-v0.4` |
+| `obligation_version` | Constant `pf-core-v0.5` (schema accepts v0.4–v0.5) |
 | `grant_id`, `grant_hash` | Grant artifact |
 | `permitted_tools` | `authorization.allowed_tools` |
 | `blocked_tools` | `authorization.blocked_tools` |
@@ -123,13 +123,14 @@ Directory containing:
 
 | Manifest field | Description |
 |----------------|-------------|
-| `manifest_version` | `pcs-v0.4` |
+| `manifest_version` | `pcs-v0.5` (schema accepts v0.4–v0.5) |
 | `artifacts` | List of bundled filenames |
 | `hashes` | SHA-256 of each artifact (canonical JSON) |
 | `source` | `akta_record_id`, `packet_id`, `decision_id`, `grant_id` |
 | `reviewer_public_key_ref` | From signed decision when present |
 | `registry_version` | `reviewer_key_registry.yaml` version field |
 | `registry_hash` | SHA-256 of canonical registry YAML |
+| `scope_trust_root_hash` | Combined SHA-256 of policy hash + registry hash |
 | Optional `ledger_excerpt`, `quality_warnings`, signature fields |
 
 Contract fixture: `tests/fixtures/contracts/pcs_manifest_contract.json`.
@@ -181,12 +182,12 @@ Quality metrics: `open_queue_count`, `overdue_queue_count`.
 
 | Artifact | Version field | Expected value |
 |----------|---------------|----------------|
-| SCOPE packet | `packet_version` | `0.5.0` |
-| SCOPE grant | `grant_version` | `0.5.0` |
+| SCOPE packet | `packet_version` | `0.5.1` |
+| SCOPE grant | `grant_version` | `0.5.1` |
 | Quality report | `report_version` | `0.5` |
-| Review queue | `queue_version` | `0.5.0` |
-| PF obligation | `obligation_version` | `pf-core-v0.4` |
-| PCS manifest | `manifest_version` | `pcs-v0.4` |
+| Review queue | `queue_version` | `0.5.1` |
+| PF obligation | `obligation_version` | `pf-core-v0.5` |
+| PCS manifest | `manifest_version` | `pcs-v0.5` |
 | Policy bundle | `version` in YAML | `scope-core-v0.5` |
 
 ## External repo dependencies
