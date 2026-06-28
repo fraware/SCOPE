@@ -27,6 +27,8 @@ def test_all_deferred_metrics_present():
         "approval_despite_akta_block_rate",
         "residual_block_preservation_rate",
         "review_queue_length",
+        "open_queue_count",
+        "overdue_queue_count",
         "median_time_to_decision",
         "reviewer_load",
         "duplicate_review_rate",
@@ -39,7 +41,7 @@ def test_all_deferred_metrics_present():
     ]
     for key in expected:
         assert key in metrics, f"Missing metric: {key}"
-    assert report["report_version"] == "0.4"
+    assert report["report_version"] == "0.5"
 
 
 def test_low_evidence_warning_and_rate(tmp_path):
