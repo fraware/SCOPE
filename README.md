@@ -2,7 +2,7 @@
 
 Home: [https://github.com/fraware/SCOPE](https://github.com/fraware/SCOPE)
 
-SCOPE is the Scoped Scientific Authorization Protocol (v0.5).
+SCOPE is the Scoped Scientific Authorization Protocol (v0.6.0).
 
 AKTA can decide that an AI-shaped scientific action requires review or authorization. SCOPE turns that decision into a structured review packet, assigns the right reviewer role, captures a scoped decision, emits a bounded grant, enforces expiration, and produces artifacts that can be verified and packaged.
 
@@ -17,6 +17,24 @@ python evals/run_review_cases.py
 ```
 
 ## CLI
+
+### AKTA review (one-shot)
+
+Primary AKTA integration path — packet, decision, grant, and summary in one command:
+
+```bash
+scope akta review \
+  --akta-trigger examples/protocol_drift/review_trigger.json \
+  --akta-record examples/protocol_drift/akta_record.json \
+  --grant-scope protocol_draft \
+  --reviewer examples/protocol_drift/reviewer_protocol_owner.json \
+  --decision-rationale "Narrow protocol draft approval only." \
+  --out-dir /tmp/akta_review_out
+```
+
+Writes `scope_review_packet.json`, `scope_decision.json`, `scope_grant.json`, and `summary.json` to `--out-dir`.
+
+In production mode, also pass `--signing-key` (Ed25519 private key PEM) so the decision is signed before grant issue.
 
 ### Packet workflow
 
@@ -118,7 +136,8 @@ scope export pf --grant /tmp/grant.json --out /tmp/pf_obligation.json --validate
 scope export pcs --packet /tmp/packet.json --decision /tmp/decision.json \
   --grant /tmp/grant.json --out /tmp/pcs_bundle --validate --live
 
-scope quality report --ledger /tmp/scope_events.jsonl --out /tmp/quality_report.json
+scope quality report --ledger /tmp/scope_events.jsonl --out /tmp/quality_report.json \
+  --queue-dir .scope/queues
 ```
 
 Set `PF_CORE_REPO_PATH` or `PCS_CORE_REPO_PATH` to sibling repo roots for optional live contract validation (`--live`). When unset, validation skips with an explicit message.
@@ -147,7 +166,7 @@ scope review queue close --queue /tmp/queue.json --reason withdrawn
 
 ```bash
 scope key register --reviewer-id protocol_owner_1 \
-  --public-key keys/reviewer.pub --private-key keys/reviewer.pem
+  --public-key keys/reviewer.pub
 
 scope key list
 
@@ -200,7 +219,8 @@ Grant check returns `{allowed, reason, code}` where `code` is `allowed`, `tool_b
 | GET | `/v0/keys` | List key registry |
 | POST | `/v0/keys/register` | Register reviewer public key |
 | POST | `/v0/keys/verify-registry` | Verify decision against registry |
-| GET | `/v0/quality` | Quality report |
+| POST | `/v0/akta/review` | AKTA one-shot review (packet → decision → grant) |
+| GET | `/v0/quality` | Quality report (`?queue_dir=` optional) |
 | POST | `/v0/export/pf` | PF-Core obligation export |
 | POST | `/v0/export/pf/validate` | Validate PF export |
 | POST | `/v0/export/pcs` | PCS bundle export |
@@ -230,7 +250,7 @@ allowed = engine.check_grant_detailed(grant, "protocol_editor.draft_change", {"p
 
 - `scope/` - core protocol engine
 - `schemas/` - JSON schemas for artifacts
-- `policy/` - YAML policy files (`scope-core-v0.5`) and domain overlays
+- `policy/` - YAML policy files (`scope-core-v0.6`) and domain overlays
 - `adapters/` - AKTA, VSA, PF-Core, PCS, REST integrations
 - `examples/` - scenario fixtures
 - `evals/` - eight core evaluation scenarios (+ four extended with `--extended`)
