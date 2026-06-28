@@ -2,7 +2,7 @@
 
 Home: [https://github.com/fraware/SCOPE](https://github.com/fraware/SCOPE)
 
-SCOPE is the Scoped Scientific Authorization Protocol (v0.2).
+SCOPE is the Scoped Scientific Authorization Protocol (v0.4).
 
 AKTA can decide that an AI-shaped scientific action requires review or authorization. SCOPE turns that decision into a structured review packet, assigns the right reviewer role, captures a scoped decision, emits a bounded grant, enforces expiration, and produces artifacts that can be verified and packaged.
 
@@ -23,6 +23,7 @@ python evals/run_review_cases.py
 ```bash
 scope packet create --akta-record examples/protocol_change_review/akta_record.json \
   --akta-trigger examples/protocol_change_review/review_trigger.json \
+  --vsa-report adapters/vsa/examples/scientific_report_example.json \
   --out /tmp/packet.json
 
 scope packet validate /tmp/packet.json
@@ -52,20 +53,36 @@ scope grant status --grant-id SCOPE-GRANT-XXXXXX --ledger /tmp/scope_events.json
 ### Multi-reviewer sessions (A6 and similar)
 
 ```bash
-scope review session create --packet /tmp/packet.json --out /tmp/session.json
+scope review session create --packet /tmp/packet.json --out /tmp/session.json \
+  --session-store json --session-dir /tmp/sessions
 
 scope review session vote --session /tmp/session.json --packet /tmp/packet.json \
   --reviewer examples/reviewer_domain_scientist.json \
-  --decision examples/decision_ds.json --out /tmp/decision_ds.json
+  --decision examples/decision_ds.json --out /tmp/decision_ds.json \
+  --session-store json --session-dir /tmp/sessions
 
 scope review session vote --session /tmp/session.json --packet /tmp/packet.json \
   --reviewer examples/reviewer_protocol_owner.json \
-  --decision examples/decision_po.json --out /tmp/decision_po.json
+  --decision examples/decision_po.json --out /tmp/decision_po.json \
+  --session-store json --session-dir /tmp/sessions
 
 scope review session issue-grant --session /tmp/session.json --packet /tmp/packet.json \
-  --decision /tmp/decision_ds.json --decision /tmp/decision_po.json --out /tmp/grant.json
+  --decision /tmp/decision_ds.json --decision /tmp/decision_po.json --out /tmp/grant.json \
+  --session-store json --session-dir /tmp/sessions
 
-scope review session status --session /tmp/session.json --packet /tmp/packet.json
+scope review session status --session-id SCOPE-SESS-XXXXXX --packet /tmp/packet.json \
+  --session-store json --session-dir /tmp/sessions
+```
+
+Session backends: `memory` (default), `json`, `sqlite`. Use `--session-dir` for persistence path.
+
+Review lifecycle ledger events:
+
+```bash
+scope review open --packet-id SCOPE-PKT-XXXXXX --actor-id reviewer-1 --ledger /tmp/scope_events.jsonl
+
+scope review view-artifact --packet-id SCOPE-PKT-XXXXXX --artifact protocol_diff_ref \
+  --actor-id reviewer-1 --ledger /tmp/scope_events.jsonl
 ```
 
 Quorum modes (`require_all`, `require_any`, `n_of_m`, `statistical_co_review`) and
@@ -73,19 +90,23 @@ Quorum modes (`require_all`, `require_any`, `n_of_m`, `statistical_co_review`) a
 
 ### Signing and production mode
 
-Production mode requires signed decisions before grant issue:
+Production mode requires a signed decision before grant issue. Decisions may be submitted unsigned, then signed:
 
 ```bash
 export SCOPE_PRODUCTION_MODE=true
 
+scope decision submit --packet /tmp/packet.json --reviewer reviewer.json \
+  --decision decision.json --out /tmp/decision.json
+
 scope decision sign --decision /tmp/decision.json --key keys/reviewer.pem --out /tmp/signed_decision.json
+scope decision validate --require-signature /tmp/signed_decision.json
+
 scope grant issue --packet /tmp/packet.json --decision /tmp/signed_decision.json --out /tmp/grant.json
 scope grant sign --grant /tmp/grant.json --key keys/reviewer.pem --out /tmp/signed_grant.json
-scope verify --artifact /tmp/signed_decision.json --key keys/reviewer.pem --type decision
+scope verify --artifact /tmp/signed_decision.json --public-key keys/reviewer.pub --type decision
 ```
 
-In production mode, grant issue checks for a signed **decision**, not a signed grant.
-Grant signing is optional and used for downstream verification and PCS export.
+Use `--public-key` for verification without private key access. `--key` remains for dev signing only.
 
 See [docs/trusted_boundary.md](docs/trusted_boundary.md) for trust assumptions.
 
@@ -110,6 +131,11 @@ uvicorn adapters.generic_rest.server:app --reload
 
 Set `SCOPE_LEDGER_PATH` for ledger-backed grant check/revoke/status.
 Set `SCOPE_SIGNING_KEY` for sign/verify endpoints.
+Set `SCOPE_SESSION_STORE` and `SCOPE_SESSION_DIR` for persistent review sessions (`json` or `sqlite`).
+Set `SCOPE_API_KEY` to require `Authorization: Bearer <key>` on all endpoints except `/v0/health`.
+Set `SCOPE_REVIEW_ROUTE_PROMOTION=true` (default) to promote valid AKTA `review_scope` values to `requested_scope`.
+
+Grant check returns `{allowed, reason, code}` where `code` is `allowed`, `tool_blocked`, `tool_not_allowed`, `grant_expired`, or `grant_revoked`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -136,6 +162,7 @@ Set `SCOPE_SIGNING_KEY` for sign/verify endpoints.
 | POST | `/v0/export/pcs/validate` | Validate PCS export |
 
 Full cross-repo demo: [docs/akta_scope_demo.md](docs/akta_scope_demo.md).
+Integration contracts: [docs/external_integration_contracts.md](docs/external_integration_contracts.md).
 
 ## Python API
 
@@ -151,17 +178,17 @@ decision = engine.submit_decision(packet, {"reviewer_id": "r1", "role": "protoco
     "rationale": "Evidence supports validation draft only.",
 })
 grant = engine.issue_grant(packet, decision)
-allowed = engine.check_grant(grant, "protocol_editor.draft_change", {"protocol_version": "protocol_v3"})
+allowed = engine.check_grant_detailed(grant, "protocol_editor.draft_change", {"protocol_version": "protocol_v3"})
 ```
 
 ## Repository layout
 
 - `scope/` - core protocol engine
 - `schemas/` - JSON schemas for artifacts
-- `policy/` - YAML policy files (`scope-core-v0.2`)
-- `adapters/` - AKTA, PF-Core, PCS, REST integrations
+- `policy/` - YAML policy files (`scope-core-v0.4`) and domain overlays
+- `adapters/` - AKTA, VSA, PF-Core, PCS, REST integrations
 - `examples/` - scenario fixtures
-- `evals/` - eight evaluation scenarios
+- `evals/` - eight core evaluation scenarios (+ four extended with `--extended`)
 - `tests/` - pytest suite
 - `docs/` - protocol documentation
 

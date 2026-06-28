@@ -1,0 +1,15 @@
+{
+  "trigger_id": "AKTA-REVTRIG-DRIFT-001",
+  "akta_record_id": "AKTA-SAR-DRIFT-001",
+  "requested_action": "update_active_protocol",
+  "requested_tool": "protocol_editor.update_active_protocol",
+  "scientific_action_type": "A5_protocol_modification",
+  "akta_admissibility": "review_required",
+  "requested_scope": "protocol_draft",
+  "scientific_context": {
+    "domain": "materials",
+    "protocol_version": "protocol_v3",
+    "evidence_state": "E2_preliminary_signal",
+    "project_id": "drift_demo"
+  }
+}

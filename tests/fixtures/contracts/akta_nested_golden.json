@@ -1,0 +1,17 @@
+{
+  "record_id": "AKTA-SAR-NESTED-001",
+  "scientific_action_type": "A5_protocol_modification",
+  "requested_action": "update_active_protocol",
+  "requested_tool": "protocol_editor.update_active_protocol",
+  "responsibility_level": "R4_methodological_modification",
+  "akta_admissibility": "review_required",
+  "evidence_state": "E2_preliminary_signal",
+  "validation_status": "V1_literature_supported",
+  "blocked_tools": ["robot_queue.submit", "lab_scheduler.prioritize"],
+  "allowed_next_steps": [
+    "approve protocol draft for validation review",
+    "request additional evidence"
+  ],
+  "inferred_requested_scope": "active_protocol_update",
+  "scope_inference_source": "tool_registry"
+}

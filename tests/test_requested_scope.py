@@ -84,7 +84,7 @@ def test_robot_submission_unknown_scope_rejected():
         )
 
 
-def test_system_owner_override_unknown_scope():
+def test_system_owner_unknown_scope_session_clarification():
     engine = ScopeEngine.from_policy_dir(ROOT / "policy")
     trigger = {
         "akta_admissibility": "authorization_required",
@@ -94,13 +94,26 @@ def test_system_owner_override_unknown_scope():
     }
     packet = engine.create_packet({"record_id": "X", **trigger}, {})
     assert packet["review_request"]["scope_inference_source"] == "unknown"
-    decision = engine.submit_decision(
+    session = engine.create_review_session(packet)
+    d1 = engine.submit_session_decision(
+        session,
         packet,
         {"reviewer_id": "so", "role": "system_owner"},
         {
             "type": "approve",
-            "approved_scope": "tool_permission_escalation",
-            "rationale": "system owner override",
+            "approved_scope": "clarification_only",
+            "rationale": "unknown scope; clarify first",
         },
     )
-    assert decision["decision"]["approved_scope"] == "tool_permission_escalation"
+    d2 = engine.submit_session_decision(
+        session,
+        packet,
+        {"reviewer_id": "ds", "role": "domain_scientist"},
+        {
+            "type": "approve",
+            "approved_scope": "clarification_only",
+            "rationale": "domain co-review",
+        },
+    )
+    grant = engine.issue_grant_from_session(session, packet, [d1, d2])
+    assert grant["authorization"]["approved_scope"] == "clarification_only"

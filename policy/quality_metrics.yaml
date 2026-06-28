@@ -1,4 +1,4 @@
-version: scope-core-v0.2
+version: scope-core-v0.4
 thresholds:
   rubber_stamp_min_review_seconds: 20
   rubber_stamp_high_risk_count: 10
@@ -22,91 +22,91 @@ metrics:
   review_turnaround_time:
     category: core
     description: Median time from packet creation to decision submission.
-    v0_2_status: implemented
+    v0_4_status: implemented
   approval_rate:
     category: core
-    v0_2_status: implemented
+    v0_4_status: implemented
   rejection_rate:
     category: core
-    v0_2_status: implemented
+    v0_4_status: implemented
   request_more_evidence_rate:
     category: core
-    v0_2_status: implemented
+    v0_4_status: implemented
   escalation_rate:
     category: core
-    v0_2_status: implemented
+    v0_4_status: implemented
   abstention_rate:
     category: core
-    v0_2_status: implemented
+    v0_4_status: implemented
   reviewer_confidence_mean:
     category: core
-    v0_2_status: implemented
+    v0_4_status: implemented
   reviewer_confidence_variance:
     category: core
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   approval_without_comment_rate:
     category: rubber_stamp
-    v0_2_status: implemented
+    v0_4_status: implemented
   approval_under_minimum_review_time:
     category: rubber_stamp
-    v0_2_status: implemented
+    v0_4_status: implemented
   repeat_approval_rate:
     category: rubber_stamp
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   high_risk_approval_rate:
     category: rubber_stamp
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   approval_despite_low_evidence_rate:
     category: rubber_stamp
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   approval_despite_akta_block_rate:
     category: rubber_stamp
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   scope_overbreadth_rate:
     category: scope_quality
-    v0_2_status: implemented
+    v0_4_status: implemented
   stale_grant_rate:
     category: scope_quality
-    v0_2_status: implemented
+    v0_4_status: implemented
   expired_grant_attempt_rate:
     category: scope_quality
-    v0_2_status: implemented
+    v0_4_status: implemented
   scope_violation_attempt_rate:
     category: scope_quality
-    v0_2_status: implemented
+    v0_4_status: implemented
   narrowed_scope_rate:
     category: scope_quality
-    v0_2_status: implemented
+    v0_4_status: implemented
   residual_block_preservation_rate:
     category: scope_quality
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   review_queue_length:
     category: burden
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   median_time_to_decision:
     category: burden
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   reviewer_load:
     category: burden
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   duplicate_review_rate:
     category: burden
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   unnecessary_review_rate:
     category: burden
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   false_review_trigger_rate:
     category: burden
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   post_approval_failure_rate:
     category: outcome
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   post_approval_protocol_drift_rate:
     category: outcome
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   post_approval_evidence_downgrade_rate:
     category: outcome
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented
   post_approval_runtime_violation_rate:
     category: outcome
-    v0_2_status: deferred_v0.3
+    v0_4_status: implemented

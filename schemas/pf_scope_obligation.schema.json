@@ -9,22 +9,34 @@
     "permitted_tools",
     "blocked_tools",
     "approved_scope",
-    "verification_mode"
+    "verification_mode",
+    "constraints",
+    "expiration"
   ],
   "properties": {
-    "obligation_version": { "type": "string" },
+    "obligation_version": { "type": "string", "pattern": "^pf-core-v0\\.4$" },
     "grant_id": { "type": "string" },
     "grant_hash": { "type": "string", "pattern": "^sha256:" },
     "permitted_tools": { "type": "array", "items": { "type": "string" } },
     "blocked_tools": { "type": "array", "items": { "type": "string" } },
     "approved_scope": { "type": "string" },
     "max_responsibility_level": { "type": "string" },
-    "constraints": { "type": "object" },
+    "constraints": {
+      "type": "object",
+      "required": ["single_use", "requires_pf_core_trace"],
+      "properties": {
+        "single_use": { "type": "boolean" },
+        "protocol_version": { "type": "string" },
+        "requires_pf_core_trace": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
     "expiration": { "type": "object" },
-    "verification_mode": { "type": "string" },
+    "verification_mode": { "type": "string", "enum": ["enforce_at_runtime"] },
     "grant_signature": { "type": "string" },
     "signature_algorithm": { "type": "string" },
-    "signed_payload_hash": { "type": "string" }
+    "signed_payload_hash": { "type": "string" },
+    "reviewer_public_key_ref": { "type": "string", "pattern": "^sha256:" }
   },
   "additionalProperties": true
 }

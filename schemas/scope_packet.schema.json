@@ -49,9 +49,17 @@
           "items": { "type": "string" }
         },
         "requested_scope": { "type": "string" },
+        "review_route": { "type": "string" },
+        "akta_decision_reason": { "type": "string" },
         "scope_inference_source": {
           "type": "string",
-          "enum": ["akta_trigger", "tool_registry", "manual_override", "unknown"]
+          "enum": [
+            "akta_trigger",
+            "tool_registry",
+            "manual_override",
+            "review_route_promoted",
+            "unknown"
+          ]
         }
       }
     },

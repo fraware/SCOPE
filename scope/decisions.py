@@ -8,11 +8,16 @@ from typing import Any
 
 import jsonschema
 
-from scope.config import require_signatures
+from scope.config import is_production_mode
 from scope.errors import DecisionValidationError, RoleValidationError, ScopeValidationError
 from scope.hash import attach_hash
 from scope.policy import PolicyStore
-from scope.roles import reviewer_info, validate_reviewer_for_action, validate_reviewer_for_scope
+from scope.roles import (
+    reviewer_info,
+    validate_reviewer_for_action,
+    validate_reviewer_for_scope,
+    validate_single_decision_allowed,
+)
 from scope.scopes import (
     is_stronger,
     resolve_requested_scope_from_tool,
@@ -42,9 +47,11 @@ class DecisionEngine:
         decision_input: dict[str, Any],
         *,
         skip_co_review: bool = False,
+        session_mode: bool = False,
         allowed_veto_roles: list[str] | None = None,
     ) -> dict[str, Any]:
         action_type = packet["review_request"]["scientific_action_type"]
+        domain_overlay = packet.get("scientific_context", {}).get("domain_overlay")
         decision_type = decision_input["type"]
         allowed = self.policy.allowed_decisions(action_type)
         if decision_type not in allowed:
@@ -52,13 +59,21 @@ class DecisionEngine:
                 f"Decision type '{decision_type}' not allowed for {action_type}"
             )
 
+        if not skip_co_review and not session_mode:
+            validate_single_decision_allowed(
+                action_type, self.policy, domain_overlay=domain_overlay
+            )
+            self._reject_legacy_co_reviewers(action_type, decision_input)
+
         rev = reviewer_info(reviewer, self.policy)
+        required_roles = packet["review_request"]["required_review_roles"]
         try:
             validate_reviewer_for_action(
                 rev["role"],
                 action_type,
                 self.policy,
-                required_roles=packet["review_request"]["required_review_roles"],
+                required_roles=required_roles,
+                domain_overlay=domain_overlay,
             )
         except RoleValidationError:
             if not (
@@ -67,8 +82,6 @@ class DecisionEngine:
                 and decision_type == "reject"
             ):
                 raise
-        if not skip_co_review:
-            self._validate_co_review(action_type, rev["role"], decision_input)
 
         decision_body: dict[str, Any] = {
             "type": decision_type,
@@ -80,7 +93,9 @@ class DecisionEngine:
             if not approved_scope:
                 raise DecisionValidationError("Approval decisions require approved_scope")
             validate_scope(approved_scope, self.policy)
-            validate_reviewer_for_scope(rev["role"], approved_scope, self.policy)
+            validate_reviewer_for_scope(
+                rev["role"], approved_scope, self.policy, session_mode=session_mode
+            )
 
             requested_scope = self._resolve_requested_scope(packet, decision_input)
             requested_tool = packet["review_request"].get("requested_tool")
@@ -131,8 +146,6 @@ class DecisionEngine:
             )
 
         decision = attach_hash(decision, "decision_hash")
-        if require_signatures() and not decision_input.get("decision_signature"):
-            raise ScopeValidationError("Production mode requires decision_signature")
         sig_fields = (
             "decision_signature",
             "reviewer_public_key_ref",
@@ -142,6 +155,9 @@ class DecisionEngine:
         for field in sig_fields:
             if decision_input.get(field):
                 decision[field] = decision_input[field]
+
+        if is_production_mode() and not decision.get("decision_signature"):
+            decision["signature_required"] = True
 
         self.validate(decision)
         return decision
@@ -182,22 +198,17 @@ class DecisionEngine:
             "Cannot approve scope stronger than clarification_only when requested scope is unknown"
         )
 
-    def _validate_co_review(
-        self, action_type: str, role: str, decision_input: dict[str, Any]
+    def _reject_legacy_co_reviewers(
+        self, action_type: str, decision_input: dict[str, Any]
     ) -> None:
-        entry = self.policy.role_matrix.get(action_type, {})
-        if not entry.get("require_all"):
-            return
-        required = entry.get("required_roles", [])
-        if len(required) <= 1:
-            return
-        others = [r for r in required if r != role]
-        co = set(decision_input.get("co_reviewers", []))
-        missing = [r for r in others if r not in co]
-        if missing:
-            raise DecisionValidationError(
-                f"Co-review required from roles: {missing} (action {action_type})"
-            )
+        if decision_input.get("co_reviewers"):
+            entry = self.policy.role_matrix.get(action_type, {})
+            required = entry.get("required_roles", [])
+            if entry.get("require_all") and len(required) > 1:
+                raise DecisionValidationError(
+                    "co_reviewers is not supported for multi-role require_all actions. "
+                    "Use 'scope review session' to collect votes from all required roles."
+                )
 
     def _default_rejected_scopes(
         self, approved_scope: str, packet: dict[str, Any]

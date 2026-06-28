@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from scope import ScopeEngine
-from scope.errors import ScopeValidationError
 from scope.signing import Ed25519Signer
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -68,20 +67,25 @@ def test_tamper_detection(tmp_path):
     assert not engine.verify_decision(signed, signer)
 
 
-def test_production_mode_rejects_unsigned(monkeypatch):
+def test_production_mode_unsigned_submit_ok_grant_blocked(monkeypatch):
+    """v0.3: unsigned submit allowed; grant issue blocked until signed."""
+    from scope.errors import GrantValidationError
+
     monkeypatch.setenv("SCOPE_PRODUCTION_MODE", "true")
     engine = ScopeEngine.from_policy_dir(ROOT / "policy")
     packet = engine.create_packet(EX / "akta_record.json", EX / "review_trigger.json")
-    with pytest.raises(ScopeValidationError, match="decision_signature"):
-        engine.submit_decision(
-            packet,
-            {"reviewer_id": "r1", "role": "protocol_owner"},
-            {
-                "type": "approve_narrower_scope",
-                "approved_scope": "protocol_draft",
-                "rationale": "ok",
-            },
-        )
+    decision = engine.submit_decision(
+        packet,
+        {"reviewer_id": "r1", "role": "protocol_owner"},
+        {
+            "type": "approve_narrower_scope",
+            "approved_scope": "protocol_draft",
+            "rationale": "ok",
+        },
+    )
+    assert decision.get("signature_required") is True
+    with pytest.raises(GrantValidationError, match="signed decision"):
+        engine.issue_grant(packet, decision)
 
 
 def test_pcs_export_includes_signatures(tmp_path):

@@ -9,9 +9,10 @@ from typing import Any, cast
 
 import click
 
-from scope import ScopeEngine
+from scope import ScopeEngine, create_session_store
 from scope.render import render_html, render_markdown
 from scope.review_session import ReviewSession
+from scope.session_store import SessionStore
 
 
 def _load_json(path: str) -> dict[str, Any]:
@@ -27,8 +28,20 @@ def _write_json(path: str, data: dict[str, Any]) -> None:
         fh.write("\n")
 
 
-def _engine(policy: str | None, ledger: str | None) -> ScopeEngine:
-    return ScopeEngine.from_policy_dir(policy or "policy/", ledger_path=ledger)
+def _engine(
+    policy: str | None,
+    ledger: str | None,
+    session_store: SessionStore | None = None,
+) -> ScopeEngine:
+    return ScopeEngine.from_policy_dir(
+        policy or "policy/",
+        ledger_path=ledger,
+        session_store=session_store,
+    )
+
+
+def _session_store_from_options(store_type: str, session_dir: str | None) -> SessionStore:
+    return create_session_store(store_type, session_dir)
 
 
 @click.group()
@@ -44,13 +57,21 @@ def packet_group() -> None:
 @packet_group.command("create")
 @click.option("--akta-record", required=False, type=click.Path(exists=True), default=None)
 @click.option("--akta-trigger", required=False, type=click.Path(exists=True), default=None)
+@click.option("--vsa-report", required=False, type=click.Path(exists=True), default=None)
 @click.option("--out", required=True, type=click.Path())
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
-def packet_create(akta_record: str | None, akta_trigger: str | None, out: str, policy: str) -> None:
+def packet_create(
+    akta_record: str | None,
+    akta_trigger: str | None,
+    vsa_report: str | None,
+    out: str,
+    policy: str,
+) -> None:
     if not akta_record and not akta_trigger:
         raise click.UsageError("At least one of --akta-record or --akta-trigger is required")
     engine = _engine(policy, None)
-    pkt = engine.create_packet(akta_record, akta_trigger)
+    vsa = _load_json(vsa_report) if vsa_report else None
+    pkt = engine.create_packet(akta_record, akta_trigger, vsa_report=vsa)
     _write_json(out, pkt)
     click.echo(f"Created packet {pkt['packet_id']} -> {out}")
 
@@ -69,9 +90,13 @@ def packet_validate(packet_path: str, policy: str) -> None:
 @click.argument("packet_path", type=click.Path(exists=True))
 @click.option("--format", "fmt", type=click.Choice(["markdown", "html"]), default="markdown")
 @click.option("--out", type=click.Path(), default=None)
-def packet_render(packet_path: str, fmt: str, out: str | None) -> None:
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def packet_render(packet_path: str, fmt: str, out: str | None, policy: str) -> None:
+    from scope.policy import PolicyStore
+
     pkt = _load_json(packet_path)
-    content = render_html(pkt) if fmt == "html" else render_markdown(pkt)
+    pol = PolicyStore.from_dir(policy)
+    content = render_html(pkt, pol) if fmt == "html" else render_markdown(pkt, pol)
     if out:
         Path(out).write_text(content, encoding="utf-8")
         click.echo(f"Rendered packet -> {out}")
@@ -90,11 +115,35 @@ def decision_group() -> None:
 @click.option("--decision", required=True, type=click.Path(exists=True))
 @click.option("--out", required=True, type=click.Path())
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
-def decision_submit(packet: str, reviewer: str, decision: str, out: str, policy: str) -> None:
+@click.option(
+    "--draft",
+    is_flag=True,
+    default=False,
+    help="Mark decision as draft (signature required before grant in production mode).",
+)
+def decision_submit(
+    packet: str, reviewer: str, decision: str, out: str, policy: str, draft: bool
+) -> None:
     engine = _engine(policy, None)
-    result = engine.submit_decision(_load_json(packet), reviewer, _load_json(decision))
+    decision_data = _load_json(decision)
+    if draft:
+        decision_data["draft"] = True
+    result = engine.submit_decision(_load_json(packet), reviewer, decision_data)
     _write_json(out, result)
     click.echo(f"Submitted decision {result['decision_id']} -> {out}")
+    if result.get("signature_required"):
+        click.echo("Note: signature_required=true (sign before grant issue in production mode).")
+
+
+@decision_group.command("validate")
+@click.argument("decision_path", type=click.Path(exists=True))
+@click.option("--require-signature", is_flag=True, default=False)
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+def decision_validate(decision_path: str, require_signature: bool, policy: str) -> None:
+    engine = _engine(policy, None)
+    dec = _load_json(decision_path)
+    engine.validate_decision(dec, require_signature=require_signature)
+    click.echo("Decision valid.")
 
 
 @decision_group.command("sign")
@@ -184,18 +233,33 @@ def grant_sign(grant: str, key: str, out: str) -> None:
 
 @main.command("verify")
 @click.option("--artifact", required=True, type=click.Path(exists=True))
-@click.option("--key", required=True, type=click.Path(exists=True))
 @click.option("--type", "artifact_type", type=click.Choice(["decision", "grant"]), required=True)
-def verify_cmd(artifact: str, key: str, artifact_type: str) -> None:
-    from scope.signing import Ed25519Signer
+@click.option("--key", type=click.Path(exists=True), default=None, help="Private key (dev signing)")
+@click.option(
+    "--public-key",
+    type=click.Path(exists=True),
+    default=None,
+    help="Public key PEM for verification without private key",
+)
+def verify_cmd(
+    artifact: str, artifact_type: str, key: str | None, public_key: str | None
+) -> None:
+    from scope.signing import Ed25519PublicVerifier, Ed25519Signer, Signer, Verifier
 
+    if not key and not public_key:
+        raise click.UsageError("Provide --public-key for verification or --key for dev signing")
     data = _load_json(artifact)
-    signer = Ed25519Signer(key)
     engine = ScopeEngine.from_policy_dir("policy/")
+    verifier: Signer | Verifier
+    if public_key:
+        verifier = Ed25519PublicVerifier(public_key)
+    else:
+        assert key is not None
+        verifier = Ed25519Signer(key)
     ok = (
-        engine.verify_decision(data, signer)
+        engine.verify_decision(data, verifier)
         if artifact_type == "decision"
-        else engine.verify_grant(data, signer)
+        else engine.verify_grant(data, verifier)
     )
     if ok:
         click.echo("VALID")
@@ -261,7 +325,43 @@ def quality_report(ledger: str, out: str, policy: str) -> None:
 
 @main.group("review")
 def review_group() -> None:
-    """Multi-reviewer review sessions."""
+    """Review lifecycle events and multi-reviewer sessions."""
+
+
+@review_group.command("open")
+@click.option("--packet-id", required=True, help="SCOPE packet ID to open for review.")
+@click.option("--actor-id", default=None, help="Reviewer or system actor opening the review.")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+@click.option("--ledger", type=click.Path(), default=None)
+def review_open(
+    packet_id: str,
+    actor_id: str | None,
+    policy: str,
+    ledger: str | None,
+) -> None:
+    """Record review_opened ledger event for a packet."""
+    engine = _engine(policy, ledger)
+    event = engine.open_review(packet_id, actor_id=actor_id)
+    click.echo(json.dumps(event, indent=2))
+
+
+@review_group.command("view-artifact")
+@click.option("--packet-id", required=True, help="SCOPE packet ID.")
+@click.option("--artifact", "artifact_name", required=True, help="Artifact name viewed.")
+@click.option("--actor-id", default=None, help="Reviewer viewing the artifact.")
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+@click.option("--ledger", type=click.Path(), default=None)
+def review_view_artifact(
+    packet_id: str,
+    artifact_name: str,
+    actor_id: str | None,
+    policy: str,
+    ledger: str | None,
+) -> None:
+    """Record artifact_viewed ledger event."""
+    engine = _engine(policy, ledger)
+    event = engine.record_artifact_viewed(packet_id, artifact_name, actor_id=actor_id)
+    click.echo(json.dumps(event, indent=2))
 
 
 @review_group.group("session")
@@ -270,12 +370,40 @@ def session_group() -> None:
 
 
 def _load_session(
-    session_path: str, packet_path: str, policy: str
+    session_path: str | None,
+    packet_path: str,
+    policy: str,
+    *,
+    session_id: str | None = None,
+    session_store: SessionStore | None = None,
 ) -> tuple[ReviewSession, dict[str, Any]]:
-    artifact = _load_json(session_path)
     packet = _load_json(packet_path)
-    session = ReviewSession.from_artifact(artifact, packet, _engine(policy, None).policy)
+    engine = _engine(policy, None, session_store=session_store)
+    if session_id:
+        session = engine.get_review_session(session_id, packet)
+        artifact = session.to_artifact()
+    elif session_path:
+        artifact = _load_json(session_path)
+        session = ReviewSession.from_artifact(artifact, packet, engine.policy)
+    else:
+        raise click.UsageError("Provide --session file or --session-id")
     return session, artifact
+
+
+def _session_options(func):
+    func = click.option(
+        "--session-store",
+        type=click.Choice(["memory", "json", "sqlite"]),
+        default="memory",
+        help="Session persistence backend.",
+    )(func)
+    func = click.option(
+        "--session-dir",
+        type=click.Path(),
+        default=None,
+        help="Directory (json) or file path (sqlite) for session store.",
+    )(func)
+    return func
 
 
 @session_group.command("create")
@@ -284,10 +412,18 @@ def _load_session(
 @click.option("--quorum-policy", type=click.Path(exists=True), default=None)
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
 @click.option("--ledger", type=click.Path(), default=None)
+@_session_options
 def session_create(
-    packet: str, out: str, quorum_policy: str | None, policy: str, ledger: str | None
+    packet: str,
+    out: str,
+    quorum_policy: str | None,
+    policy: str,
+    ledger: str | None,
+    session_store: str,
+    session_dir: str | None,
 ) -> None:
-    engine = _engine(policy, ledger)
+    store = _session_store_from_options(session_store, session_dir)
+    engine = _engine(policy, ledger, session_store=store)
     pkt = _load_json(packet)
     quorum = _load_json(quorum_policy) if quorum_policy else None
     session = engine.create_review_session(pkt, quorum_policy=quorum)
@@ -296,37 +432,55 @@ def session_create(
 
 
 @session_group.command("vote")
-@click.option("--session", "session_path", required=True, type=click.Path(exists=True))
+@click.option("--session", "session_path", required=False, type=click.Path(exists=True))
+@click.option("--session-id", default=None, help="Load session from store by ID.")
 @click.option("--packet", required=True, type=click.Path(exists=True))
 @click.option("--reviewer", required=True, type=click.Path(exists=True))
 @click.option("--decision", required=True, type=click.Path(exists=True))
 @click.option("--out", required=True, type=click.Path())
+@click.option(
+    "--replace-vote",
+    is_flag=True,
+    default=False,
+    help="Supersede prior vote from same reviewer.",
+)
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
 @click.option("--ledger", type=click.Path(), default=None)
+@_session_options
 def session_vote(
-    session_path: str,
+    session_path: str | None,
+    session_id: str | None,
     packet: str,
     reviewer: str,
     decision: str,
     out: str,
     policy: str,
     ledger: str | None,
+    session_store: str,
+    session_dir: str | None,
+    replace_vote: bool,
 ) -> None:
-    engine = _engine(policy, ledger)
-    session, _ = _load_session(session_path, packet, policy)
+    store = _session_store_from_options(session_store, session_dir)
+    engine = _engine(policy, ledger, session_store=store)
+    session, _ = _load_session(
+        session_path, packet, policy, session_id=session_id, session_store=store
+    )
     result = engine.submit_session_decision(
         session,
         _load_json(packet),
         _load_json(reviewer),
         _load_json(decision),
+        replace_vote=replace_vote,
     )
     _write_json(out, result)
-    _write_json(session_path, session.to_artifact())
+    if session_path:
+        _write_json(session_path, session.to_artifact())
     click.echo(f"Recorded vote {result['decision_id']} -> {out}")
 
 
 @session_group.command("issue-grant")
-@click.option("--session", "session_path", required=True, type=click.Path(exists=True))
+@click.option("--session", "session_path", required=False, type=click.Path(exists=True))
+@click.option("--session-id", default=None, help="Load session from store by ID.")
 @click.option("--packet", required=True, type=click.Path(exists=True))
 @click.option(
     "--decision",
@@ -338,16 +492,23 @@ def session_vote(
 @click.option("--out", required=True, type=click.Path())
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
 @click.option("--ledger", type=click.Path(), default=None)
+@_session_options
 def session_issue_grant(
-    session_path: str,
+    session_path: str | None,
+    session_id: str | None,
     packet: str,
     decision_paths: tuple[str, ...],
     out: str,
     policy: str,
     ledger: str | None,
+    session_store: str,
+    session_dir: str | None,
 ) -> None:
-    engine = _engine(policy, ledger)
-    session, _ = _load_session(session_path, packet, policy)
+    store = _session_store_from_options(session_store, session_dir)
+    engine = _engine(policy, ledger, session_store=store)
+    session, _ = _load_session(
+        session_path, packet, policy, session_id=session_id, session_store=store
+    )
     decisions = [_load_json(path) for path in decision_paths]
     grant = engine.issue_grant_from_session(session, _load_json(packet), decisions)
     _write_json(out, grant)
@@ -355,11 +516,27 @@ def session_issue_grant(
 
 
 @session_group.command("status")
-@click.option("--session", "session_path", required=True, type=click.Path(exists=True))
+@click.option("--session", "session_path", required=False, type=click.Path(exists=True))
+@click.option("--session-id", default=None, help="Query session status by ID from store.")
 @click.option("--packet", required=True, type=click.Path(exists=True))
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
-def session_status(session_path: str, packet: str, policy: str) -> None:
-    session, _ = _load_session(session_path, packet, policy)
+@_session_options
+def session_status(
+    session_path: str | None,
+    session_id: str | None,
+    packet: str,
+    policy: str,
+    session_store: str,
+    session_dir: str | None,
+) -> None:
+    store = _session_store_from_options(session_store, session_dir)
+    if session_id:
+        engine = _engine(policy, None, session_store=store)
+        click.echo(json.dumps(engine.session_status(session_id), indent=2))
+        return
+    session, _ = _load_session(
+        session_path, packet, policy, session_id=session_id, session_store=store
+    )
     click.echo(json.dumps(session.to_artifact(), indent=2))
 
 

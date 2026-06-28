@@ -2,9 +2,20 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Review Assignment",
   "type": "object",
-  "required": ["action_type", "required_roles"],
+  "required": ["action_type", "required_roles", "quorum_mode", "packet_id"],
   "properties": {
     "action_type": { "type": "string" },
-    "required_roles": { "type": "array", "items": { "type": "string" } }
-  }
+    "required_roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "quorum_mode": {
+      "type": "string",
+      "enum": ["require_all", "require_any"]
+    },
+    "domain_overlay": { "type": ["string", "null"] },
+    "packet_id": { "type": "string" }
+  },
+  "additionalProperties": false
 }

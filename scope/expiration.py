@@ -53,11 +53,39 @@ def check_expiration(
         if grant_policy and ctx_policy and grant_policy != ctx_policy:
             raise ExpirationError("Grant expired: policy version changed")
 
-    if context.get("revoked"):
-        raise ExpirationError("Grant expired: manually revoked")
+    if "domain_overlay_change" in triggers:
+        grant_overlay = constraints.get("domain_overlay")
+        ctx_overlay = context.get("domain_overlay")
+        if grant_overlay is not None and ctx_overlay is not None and grant_overlay != ctx_overlay:
+            raise ExpirationError(
+                f"Grant expired: domain overlay changed ({grant_overlay} -> {ctx_overlay})"
+            )
+
+    if "model_version_change" in triggers:
+        grant_model = constraints.get("model_version")
+        ctx_model = context.get("model_version")
+        if grant_model and ctx_model and grant_model != ctx_model:
+            raise ExpirationError(
+                f"Grant expired: model version changed ({grant_model} -> {ctx_model})"
+            )
+
+    if "tool_registry_change" in triggers:
+        grant_registry = constraints.get("tool_registry_version")
+        ctx_registry = context.get("tool_registry_version")
+        if grant_registry and ctx_registry and grant_registry != ctx_registry:
+            raise ExpirationError("Grant expired: tool registry version changed")
+
+    if context.get("revoked") or context.get("reviewer_withdrawal"):
+        raise ExpirationError("Grant expired: manually revoked or reviewer withdrawal")
 
     if context.get("safety_incident") and "safety_incident" in triggers:
         raise ExpirationError("Grant expired: safety incident")
+
+    if (
+        context.get("validation_run_completed")
+        and "completion_of_single_validation_run" in triggers
+    ):
+        raise ExpirationError("Grant expired: single validation run completed")
 
     absolute = expiration.get("absolute_expiration")
     if absolute and context.get("current_time"):

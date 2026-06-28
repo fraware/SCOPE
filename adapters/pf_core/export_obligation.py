@@ -22,7 +22,7 @@ def export_pf_obligation(grant: dict[str, Any]) -> dict[str, Any]:
     auth = grant.get("authorization", {})
     constraints = grant.get("constraints", {})
     result: dict[str, Any] = {
-        "obligation_version": "pf-core-v0.2",
+        "obligation_version": "pf-core-v0.4",
         "grant_id": grant["grant_id"],
         "grant_hash": grant.get("grant_hash"),
         "permitted_tools": auth.get("allowed_tools", []),

@@ -19,7 +19,7 @@
     "reviewer_id": { "type": "string" },
     "reviewer_role": { "type": "string" },
     "decision_type": { "type": "string" },
-    "approved_scope": { "type": "string" },
+    "approved_scope": { "type": ["string", "null"] },
     "submitted_at": { "type": "string" }
   },
   "additionalProperties": true

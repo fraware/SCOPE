@@ -21,7 +21,7 @@ def test_pf_export():
     )
     grant = engine.issue_grant(packet, decision)
     pf = export_pf_obligation(grant)
-    assert pf["obligation_version"] == "pf-core-v0.2"
+    assert pf["obligation_version"] == "pf-core-v0.4"
     assert "protocol_editor.draft_change" in pf["permitted_tools"]
     assert "robot_queue.submit" in pf["blocked_tools"]
 

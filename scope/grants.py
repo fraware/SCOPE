@@ -35,6 +35,7 @@ class GrantEngine:
         decision: dict[str, Any],
         *,
         constraints: dict[str, Any] | None = None,
+        contributing_signatures: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         decision_type = decision["decision"]["type"]
         if not self.policy.is_approval_decision(decision_type):
@@ -53,6 +54,8 @@ class GrantEngine:
         ctx = packet.get("scientific_context", {})
         extra = constraints or {}
 
+        from scope._version import __version__
+
         auth: dict[str, Any] = {
             "approved_scope": approved_scope,
             "approved_actions": [packet["review_request"]["scientific_action_type"]],
@@ -65,7 +68,7 @@ class GrantEngine:
 
         grant: dict[str, Any] = {
             "grant_id": _new_grant_id(),
-            "grant_version": "0.2",
+            "grant_version": __version__,
             "created_at": _utc_now(),
             "source": {
                 "packet_id": packet["packet_id"],
@@ -81,6 +84,8 @@ class GrantEngine:
                     "protocol_version", ctx.get("protocol_version", "protocol_v1")
                 ),
                 "domain_overlay": ctx.get("domain_overlay"),
+                "model_version": ctx.get("model_version"),
+                "tool_registry_version": ctx.get("tool_registry_version"),
                 "evidence_state": ctx.get("evidence_state"),
                 "validation_status": ctx.get("validation_status"),
                 "requires_recording": True,
@@ -100,6 +105,8 @@ class GrantEngine:
                 "reviewer_role_policy_hash": self.policy.policy_hash,
             },
         }
+        if contributing_signatures:
+            grant["contributing_signatures"] = contributing_signatures
         grant = attach_hash(grant, "grant_hash")
         if require_signatures() and not decision.get("decision_signature"):
             raise GrantValidationError(
@@ -125,23 +132,23 @@ class GrantEngine:
         *,
         ledger_used: bool = False,
         ledger_revoked: bool = False,
-    ) -> tuple[bool, str | None]:
+    ) -> tuple[bool, str | None, str | None]:
         context = context or {}
         if ledger_revoked:
-            return False, "Grant revoked per ledger"
+            return False, "Grant revoked per ledger", "grant_revoked"
         used = ledger_used or context.get("grant_used", False)
         try:
             check_expiration(grant, context, used=used)
         except Exception as exc:
-            return False, str(exc)
+            return False, str(exc), "grant_expired"
 
         auth = grant.get("authorization", {})
         if requested_tool in auth.get("blocked_tools", []):
-            return False, f"Tool '{requested_tool}' is blocked by grant"
+            return False, f"Tool '{requested_tool}' is blocked by grant", "tool_blocked"
         allowed = auth.get("allowed_tools", [])
         if requested_tool not in allowed:
-            return False, f"Tool '{requested_tool}' not in allowed tools"
-        return True, None
+            return False, f"Tool '{requested_tool}' not in allowed tools", "tool_not_allowed"
+        return True, None, None
 
     def validate(self, grant: dict[str, Any]) -> None:
         if self.schema:
