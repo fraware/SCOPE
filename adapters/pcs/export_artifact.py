@@ -10,6 +10,7 @@ import jsonschema
 
 from adapters.pf_core.export_obligation import export_pf_obligation
 from scope.hash import compute_hash, verify_hash
+from scope.integration_versions import PCS_MANIFEST_VERSION
 
 
 def export_pcs_artifact(
@@ -39,7 +40,7 @@ def export_pcs_artifact(
             fh.write("\n")
 
     manifest: dict[str, Any] = {
-        "manifest_version": "pcs-v0.4",
+        "manifest_version": PCS_MANIFEST_VERSION,
         "artifacts": list(artifacts.keys()),
         "hashes": {name: compute_hash(data) for name, data in artifacts.items()},
         "source": {
@@ -67,6 +68,12 @@ def export_pcs_artifact(
         manifest["registry_version"] = registry_version
     if registry_hash:
         manifest["registry_hash"] = registry_hash
+    trust_root = (grant.get("provenance") or {}).get("scope_trust_root_hash") or (
+        decision.get("provenance") or {}
+    ).get("scope_trust_root_hash")
+    if not trust_root:
+        raise ValueError("Missing scope_trust_root_hash in decision/grant provenance")
+    manifest["scope_trust_root_hash"] = trust_root
 
     with (out / "release_manifest.json").open("w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2, sort_keys=True)
