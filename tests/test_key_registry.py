@@ -24,7 +24,7 @@ def test_key_register_and_verify_registry(tmp_path):
     pub = tmp_path / "reviewer.pub"
     Ed25519Signer.generate_keypair(key, pub)
 
-    result = register_reviewer_key(policy_copy, "rev1", pub, private_key_path=key)
+    result = register_reviewer_key(policy_copy, "rev1", pub)
     assert result["reviewer_id"] == "rev1"
     registry = yaml.safe_load((policy_copy / "reviewer_key_registry.yaml").read_text())
     assert registry["reviewers"]["rev1"]["public_key_ref"] == result["public_key_ref"]
@@ -96,7 +96,7 @@ def test_verify_registry_resolves_public_key_from_registry(tmp_path):
     key = tmp_path / "reviewer.pem"
     pub = tmp_path / "reviewer.pub"
     Ed25519Signer.generate_keypair(key, pub)
-    register_reviewer_key(policy_copy, "rev1", pub, private_key_path=key)
+    register_reviewer_key(policy_copy, "rev1", pub)
 
     engine = ScopeEngine.from_policy_dir(policy_copy)
     trigger = {
@@ -131,7 +131,7 @@ def test_decision_and_grant_provenance_include_registry_hash(tmp_path):
     key = tmp_path / "reviewer.pem"
     pub = tmp_path / "reviewer.pub"
     Ed25519Signer.generate_keypair(key, pub)
-    register_reviewer_key(policy_copy, "rev1", pub, private_key_path=key)
+    register_reviewer_key(policy_copy, "rev1", pub)
 
     engine = ScopeEngine.from_policy_dir(policy_copy)
     trigger = {
@@ -153,6 +153,7 @@ def test_decision_and_grant_provenance_include_registry_hash(tmp_path):
         },
     )
     assert decision["provenance"]["reviewer_key_registry_hash"].startswith("sha256:")
+    assert decision["provenance"]["scope_trust_root_hash"].startswith("sha256:")
     signed = engine.sign_decision(decision, Ed25519Signer(key))
     grant = engine.issue_grant(packet, signed)
     assert grant["provenance"]["reviewer_key_registry_hash"].startswith("sha256:")
@@ -174,7 +175,7 @@ def test_key_list_registry(tmp_path):
 
     summary = verify_registry_integrity(policy_copy)
     assert summary["reviewer_count"] == 1
-    assert summary["registry_version"] == "scope-core-v0.5"
+    assert summary["registry_version"] == "scope-core-v0.6"
 
 
 def test_pcs_export_includes_registry_metadata(tmp_path):
@@ -183,7 +184,7 @@ def test_pcs_export_includes_registry_metadata(tmp_path):
     key = tmp_path / "reviewer.pem"
     pub = tmp_path / "reviewer.pub"
     Ed25519Signer.generate_keypair(key, pub)
-    register_reviewer_key(policy_copy, "rev1", pub, private_key_path=key)
+    register_reviewer_key(policy_copy, "rev1", pub)
 
     engine = ScopeEngine.from_policy_dir(policy_copy)
     trigger = {
