@@ -1,4 +1,4 @@
-"""Optional FastAPI REST server for SCOPE v0.2."""
+"""Optional FastAPI REST server for SCOPE v0.4."""
 
 from __future__ import annotations
 
@@ -7,17 +7,28 @@ import tempfile
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
-from scope import ScopeEngine
+from scope import ScopeEngine, create_session_store
+from scope.config import api_key
 from scope.errors import GrantValidationError, ScopeValidationError
 from scope.render import render_html, render_markdown
-from scope.signing import Ed25519Signer
+from scope.signing import Ed25519PublicVerifier, Ed25519Signer
 
-app = FastAPI(title="SCOPE REST API", version="0.2.0")
+app = FastAPI(title="SCOPE REST API", version="0.4.0")
 _engine: ScopeEngine | None = None
 _SCHEMAS_DIR = Path(__file__).resolve().parents[2] / "schemas"
+
+
+def _require_api_key(request: Request) -> None:
+    expected = api_key()
+    if not expected:
+        return
+    auth = request.headers.get("Authorization", "")
+    if auth == f"Bearer {expected}":
+        return
+    raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 def get_engine() -> ScopeEngine:
@@ -25,7 +36,12 @@ def get_engine() -> ScopeEngine:
     if _engine is None:
         policy = Path(__file__).resolve().parents[2] / "policy"
         ledger = os.environ.get("SCOPE_LEDGER_PATH")
-        _engine = ScopeEngine.from_policy_dir(policy, ledger_path=ledger)
+        store_type = os.environ.get("SCOPE_SESSION_STORE", "memory")
+        session_dir = os.environ.get("SCOPE_SESSION_DIR")
+        session_store = create_session_store(store_type, session_dir)
+        _engine = ScopeEngine.from_policy_dir(
+            policy, ledger_path=ledger, session_store=session_store
+        )
     return _engine
 
 
@@ -42,6 +58,7 @@ def _signer_from_env(explicit: str | None = None) -> Ed25519Signer:
 class PacketCreateRequest(BaseModel):
     akta_record: dict[str, Any]
     akta_trigger: dict[str, Any]
+    vsa_report: dict[str, Any] | None = None
 
 
 class PacketRenderRequest(BaseModel):
@@ -64,6 +81,7 @@ class VerifyRequest(BaseModel):
     artifact: dict[str, Any]
     artifact_type: Literal["decision", "grant"]
     key_path: str | None = None
+    public_key_path: str | None = None
 
 
 class GrantIssueRequest(BaseModel):
@@ -80,6 +98,7 @@ class GrantCheckRequest(BaseModel):
 class GrantRevokeRequest(BaseModel):
     grant_id: str
     reason: str = "Manual revocation"
+    reviewer_withdrawal: bool = False
 
 
 class ReviewSessionCreateRequest(BaseModel):
@@ -91,6 +110,7 @@ class ReviewSessionVoteRequest(BaseModel):
     packet: dict[str, Any]
     reviewer: dict[str, Any]
     decision: dict[str, Any]
+    replace_vote: bool = False
 
 
 class ReviewSessionGrantRequest(BaseModel):
@@ -115,27 +135,32 @@ def _http_error(exc: Exception) -> HTTPException:
 
 @app.get("/v0/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "version": "0.2.0"}
+    return {"status": "ok", "version": "0.4.0"}
 
 
-@app.post("/v0/packets")
+@app.post("/v0/packets", dependencies=[Depends(_require_api_key)])
 def create_packet(req: PacketCreateRequest) -> dict[str, Any]:
-    return get_engine().create_packet(req.akta_record, req.akta_trigger)
+    return get_engine().create_packet(req.akta_record, req.akta_trigger, vsa_report=req.vsa_report)
 
 
-@app.post("/v0/packets/validate")
+@app.post("/v0/packets/validate", dependencies=[Depends(_require_api_key)])
 def validate_packet(packet: dict[str, Any]) -> dict[str, str]:
     get_engine().validate_packet(packet)
     return {"status": "valid"}
 
 
-@app.post("/v0/packets/render")
+@app.post("/v0/packets/render", dependencies=[Depends(_require_api_key)])
 def render_packet(req: PacketRenderRequest) -> dict[str, str]:
-    content = render_html(req.packet) if req.format == "html" else render_markdown(req.packet)
+    engine = get_engine()
+    content = (
+        render_html(req.packet, engine.policy)
+        if req.format == "html"
+        else render_markdown(req.packet, engine.policy)
+    )
     return {"format": req.format, "content": content}
 
 
-@app.post("/v0/decisions")
+@app.post("/v0/decisions", dependencies=[Depends(_require_api_key)])
 def submit_decision(req: DecisionRequest) -> dict[str, Any]:
     try:
         return get_engine().submit_decision(req.packet, req.reviewer, req.decision)
@@ -143,7 +168,7 @@ def submit_decision(req: DecisionRequest) -> dict[str, Any]:
         raise _http_error(exc) from exc
 
 
-@app.post("/v0/decisions/sign")
+@app.post("/v0/decisions/sign", dependencies=[Depends(_require_api_key)])
 def sign_decision(req: SignRequest) -> dict[str, Any]:
     try:
         signer = _signer_from_env(req.key_path)
@@ -154,42 +179,46 @@ def sign_decision(req: SignRequest) -> dict[str, Any]:
         raise _http_error(exc) from exc
 
 
-@app.post("/v0/review-sessions")
+@app.post("/v0/review-sessions", dependencies=[Depends(_require_api_key)])
 def create_review_session(req: ReviewSessionCreateRequest) -> dict[str, Any]:
     session = get_engine().create_review_session(req.packet, quorum_policy=req.quorum_policy)
     return session.to_artifact()
 
 
-@app.get("/v0/review-sessions/{session_id}")
+@app.get("/v0/review-sessions/{session_id}", dependencies=[Depends(_require_api_key)])
 def get_review_session(session_id: str) -> dict[str, Any]:
     try:
-        return get_engine().get_review_session(session_id).to_artifact()
+        return get_engine().session_status(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@app.post("/v0/review-sessions/{session_id}/votes")
+@app.post("/v0/review-sessions/{session_id}/votes", dependencies=[Depends(_require_api_key)])
 def submit_review_vote(session_id: str, req: ReviewSessionVoteRequest) -> dict[str, Any]:
     try:
-        session = get_engine().get_review_session(session_id)
+        session = get_engine().get_review_session(session_id, req.packet)
         decision = get_engine().submit_session_decision(
-            session, req.packet, req.reviewer, req.decision
+            session,
+            req.packet,
+            req.reviewer,
+            req.decision,
+            replace_vote=req.replace_vote,
         )
         return {"decision": decision, "session": session.to_artifact()}
     except Exception as exc:
         raise _http_error(exc) from exc
 
 
-@app.post("/v0/review-sessions/{session_id}/grants")
+@app.post("/v0/review-sessions/{session_id}/grants", dependencies=[Depends(_require_api_key)])
 def issue_grant_from_session(session_id: str, req: ReviewSessionGrantRequest) -> dict[str, Any]:
     try:
-        session = get_engine().get_review_session(session_id)
+        session = get_engine().get_review_session(session_id, req.packet)
         return get_engine().issue_grant_from_session(session, req.packet, req.decisions)
     except Exception as exc:
         raise _http_error(exc) from exc
 
 
-@app.post("/v0/grants")
+@app.post("/v0/grants", dependencies=[Depends(_require_api_key)])
 def issue_grant(req: GrantIssueRequest) -> dict[str, Any]:
     try:
         return get_engine().issue_grant(req.packet, req.decision)
@@ -197,23 +226,26 @@ def issue_grant(req: GrantIssueRequest) -> dict[str, Any]:
         raise _http_error(exc) from exc
 
 
-@app.post("/v0/grants/check")
+@app.post("/v0/grants/check", dependencies=[Depends(_require_api_key)])
 def check_grant(req: GrantCheckRequest) -> dict[str, Any]:
-    ok = get_engine().check_grant(req.grant, req.requested_tool, req.context)
-    return {"allowed": ok}
+    return get_engine().check_grant_detailed(req.grant, req.requested_tool, req.context)
 
 
-@app.post("/v0/grants/revoke")
+@app.post("/v0/grants/revoke", dependencies=[Depends(_require_api_key)])
 def revoke_grant(req: GrantRevokeRequest) -> dict[str, Any]:
-    return get_engine().revoke_grant(req.grant_id, reason=req.reason)
+    return get_engine().revoke_grant(
+        req.grant_id,
+        reason=req.reason,
+        reviewer_withdrawal=req.reviewer_withdrawal,
+    )
 
 
-@app.get("/v0/grants/{grant_id}/status")
+@app.get("/v0/grants/{grant_id}/status", dependencies=[Depends(_require_api_key)])
 def grant_status(grant_id: str) -> dict[str, Any]:
     return get_engine().grant_status(grant_id)
 
 
-@app.post("/v0/grants/sign")
+@app.post("/v0/grants/sign", dependencies=[Depends(_require_api_key)])
 def sign_grant(req: SignRequest) -> dict[str, Any]:
     try:
         signer = _signer_from_env(req.key_path)
@@ -224,15 +256,18 @@ def sign_grant(req: SignRequest) -> dict[str, Any]:
         raise _http_error(exc) from exc
 
 
-@app.post("/v0/verify")
+@app.post("/v0/verify", dependencies=[Depends(_require_api_key)])
 def verify_artifact(req: VerifyRequest) -> dict[str, bool]:
     try:
-        signer = _signer_from_env(req.key_path)
+        if req.public_key_path:
+            verifier = Ed25519PublicVerifier(req.public_key_path)
+        else:
+            verifier = _signer_from_env(req.key_path)
         engine = get_engine()
         ok = (
-            engine.verify_decision(req.artifact, signer)
+            engine.verify_decision(req.artifact, verifier)
             if req.artifact_type == "decision"
-            else engine.verify_grant(req.artifact, signer)
+            else engine.verify_grant(req.artifact, verifier)
         )
         return {"valid": ok}
     except HTTPException:
@@ -241,19 +276,19 @@ def verify_artifact(req: VerifyRequest) -> dict[str, bool]:
         raise _http_error(exc) from exc
 
 
-@app.get("/v0/quality")
+@app.get("/v0/quality", dependencies=[Depends(_require_api_key)])
 def quality() -> dict[str, Any]:
     return get_engine().quality_report()
 
 
-@app.post("/v0/export/pf")
+@app.post("/v0/export/pf", dependencies=[Depends(_require_api_key)])
 def export_pf(grant: dict[str, Any]) -> dict[str, Any]:
     from adapters.pf_core.export_obligation import export_pf_obligation
 
     return export_pf_obligation(grant)
 
 
-@app.post("/v0/export/pf/validate")
+@app.post("/v0/export/pf/validate", dependencies=[Depends(_require_api_key)])
 def validate_pf_export_endpoint(body: dict[str, Any]) -> dict[str, str]:
     from adapters.pf_core.export_obligation import export_pf_obligation, validate_pf_export
 
@@ -264,7 +299,7 @@ def validate_pf_export_endpoint(body: dict[str, Any]) -> dict[str, str]:
     return {"status": "valid"}
 
 
-@app.post("/v0/export/pcs")
+@app.post("/v0/export/pcs", dependencies=[Depends(_require_api_key)])
 def export_pcs(req: PcsExportRequest) -> dict[str, str]:
     from adapters.pcs.export_artifact import export_pcs_artifact, validate_pcs_export
 
@@ -284,7 +319,7 @@ def export_pcs(req: PcsExportRequest) -> dict[str, str]:
     return {"path": str(tmp), "validated": str(req.run_validation).lower()}
 
 
-@app.post("/v0/export/pcs/validate")
+@app.post("/v0/export/pcs/validate", dependencies=[Depends(_require_api_key)])
 def validate_pcs_export_endpoint(body: dict[str, Any]) -> dict[str, str]:
     from adapters.pcs.export_artifact import export_pcs_artifact, validate_pcs_export
 
