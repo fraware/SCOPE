@@ -1,6 +1,6 @@
-# SCOPE Pilot Fixture Pack (v0.8)
+# SCOPE Pilot Fixture Pack (v0.8.1)
 
-Institutional pilot scenarios generated with SCOPE v0.8 CLI and engine APIs. Each subdirectory is self-contained with review artifacts, queue state where applicable, rendered packet markdown, and a quality report snippet.
+Institutional pilot scenarios generated with SCOPE v0.8.1 CLI and engine APIs. Each subdirectory is self-contained with review artifacts, queue state where applicable, rendered packet markdown, and a quality report snippet.
 
 | Scenario | Directory | Highlights |
 |----------|-----------|------------|
@@ -10,4 +10,10 @@ Institutional pilot scenarios generated with SCOPE v0.8 CLI and engine APIs. Eac
 | Needs information flow | [needs_information_flow](needs_information_flow/) | `needs_information` to `in_review` |
 | Registry-signed decision | [registry_signed_decision](registry_signed_decision/) | `--signing-provider registry --reviewer-id` |
 
-Policy bundle: `scope-core-v0.8`. AKTA review contract: `scope-akta-review-v0.8`.
+Policy bundle: `scope-core-v0.8`. AKTA review contract: `scope-akta-review-v0.8.1`.
+
+Each scenario includes `manifest.json` (artifact inventory and schema versions) and `expected_verification.json` (checksums, status values, queue states). Verify offline:
+
+```bash
+python scripts/verify_pilot_fixtures.py
+```

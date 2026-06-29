@@ -1,4 +1,4 @@
-"""Scoped Scientific Authorization Protocol (SCOPE) v0.8.0."""
+"""Scoped Scientific Authorization Protocol (SCOPE) v0.8.1."""
 
 from __future__ import annotations
 

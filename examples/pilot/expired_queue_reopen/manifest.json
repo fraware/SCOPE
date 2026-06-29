@@ -1,0 +1,22 @@
+{
+  "scenario": "expired_queue_reopen",
+  "scope_version": "0.8.1",
+  "policy_version": "scope-core-v0.8",
+  "artifacts": [
+    {
+      "path": "scope_review_packet.json",
+      "schema": "scope_packet.schema.json"
+    },
+    {
+      "path": "review_queue_expired.json",
+      "schema": "scope_review_queue.schema.json"
+    },
+    {
+      "path": "review_queue_reopened.json",
+      "schema": "scope_review_queue.schema.json"
+    },
+    {
+      "path": "quality_report_snippet.json"
+    }
+  ]
+}

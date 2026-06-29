@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from scope.errors import GrantValidationError
 from scope.hash import compute_hash
 from scope.identity_assurance import IAL0, IAL1, IAL2, IAL3, IAL4
 from scope.review_session import ReviewSession
@@ -11,6 +12,44 @@ from scope.signing_assurance import SAL0, SAL1, SAL2, SAL3, SAL4, resolve_signin
 
 IAL_RANK = {IAL0: 0, IAL1: 1, IAL2: 2, IAL3: 3, IAL4: 4}
 SAL_RANK = {SAL0: 0, SAL1: 1, SAL2: 2, SAL3: 3, SAL4: 4}
+
+SESSION_PROVENANCE_FIELDS = (
+    "contributing_identity_assurance_levels",
+    "contributing_authority_checks",
+    "minimum_identity_assurance_level",
+    "minimum_signing_assurance_level",
+    "veto_roles_applied",
+    "quorum_policy_hash",
+)
+
+
+def is_session_grant_provenance(provenance: dict[str, Any]) -> bool:
+    """True when provenance carries session aggregation markers."""
+    levels = provenance.get("contributing_identity_assurance_levels")
+    return isinstance(levels, list) and len(levels) > 0
+
+
+def validate_session_grant_provenance(provenance: dict[str, Any]) -> None:
+    """Runtime check: session grants must include full provenance block."""
+    if not is_session_grant_provenance(provenance):
+        return
+    missing = [field for field in SESSION_PROVENANCE_FIELDS if field not in provenance]
+    if missing:
+        raise GrantValidationError(
+            "Session grant provenance missing required fields: "
+            + ", ".join(sorted(missing))
+        )
+    if not provenance["contributing_identity_assurance_levels"]:
+        raise GrantValidationError(
+            "Session grant provenance requires non-empty "
+            "contributing_identity_assurance_levels"
+        )
+    if not provenance["contributing_authority_checks"]:
+        raise GrantValidationError(
+            "Session grant provenance requires non-empty contributing_authority_checks"
+        )
+    if not str(provenance["quorum_policy_hash"]).startswith("sha256:"):
+        raise GrantValidationError("Session grant provenance quorum_policy_hash invalid")
 
 
 def _minimum_level(levels: list[str], rank: dict[str, int], default: str) -> str:

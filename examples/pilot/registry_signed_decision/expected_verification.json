@@ -1,0 +1,17 @@
+{
+  "checksums": {
+    "quality_report_snippet.json": "sha256:a6906f08514b0fe2b9e20ff574a388ab6e4298ee627e3c4d8b5313ad94fff778",
+    "scope_decision.json": "sha256:1627726d073cff8ff14ac149e8ed9be94e3b2a5f55596885925ea4f77e2a74e9",
+    "scope_grant.json": "sha256:cafe5cccb559769e20c3a5d1ef0242f3f388db66ce80161cffe6a01b5d3bde1c",
+    "scope_review_packet.json": "sha256:84eba11c3b0632906d74334b4c93b7a6630ddb7ed65441d22f25c14eb2ea1f8e",
+    "summary.json": "sha256:8b06e3c0832d779ce361ca91e8720e455b7dd291c4fafda0505896920d072132"
+  },
+  "quality_report_snippet": {
+    "policy_version": "scope-core-v0.8"
+  },
+  "summary": {
+    "adapter_contract_version": "scope-akta-review-v0.8.1",
+    "approved_scope": "protocol_draft",
+    "status": "completed"
+  }
+}

@@ -11,7 +11,7 @@
 
 **Scoped authorization for AI-shaped scientific work**
 
-[![Version](https://img.shields.io/badge/version-0.8.0-blue)](https://github.com/fraware/SCOPE/releases)
+[![Version](https://img.shields.io/badge/version-0.8.1-blue)](https://github.com/fraware/SCOPE/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![CI](https://github.com/fraware/SCOPE/actions/workflows/ci.yml/badge.svg)](https://github.com/fraware/SCOPE/actions/workflows/ci.yml)

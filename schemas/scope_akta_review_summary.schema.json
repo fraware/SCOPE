@@ -1,9 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://scope.dev/schemas/scope_akta_review_summary.schema.json",
-  "title": "SCOPE AKTA Review Summary",
+  "title": "SCOPE AKTA Review Summary (completed)",
+  "description": "Adapter summary for completed AKTA reviews only (status=completed). Session summaries use scope_akta_review_session_summary.schema.json.",
   "type": "object",
   "required": [
+    "status",
     "packet_path",
     "decision_path",
     "grant_path",
@@ -15,7 +17,7 @@
     "production_mode"
   ],
   "properties": {
-    "status": { "type": "string" },
+    "status": { "const": "completed" },
     "packet_path": { "type": "string" },
     "decision_path": { "type": "string" },
     "grant_path": { "type": "string" },
@@ -23,7 +25,7 @@
     "decision_id": { "type": "string" },
     "grant_id": { "type": "string" },
     "approved_scope": { "type": "string" },
-    "requested_scope": { "type": "string" },
+    "requested_scope": { "type": ["string", "null"] },
     "allowed_tools": {
       "type": "array",
       "items": { "type": "string" }
@@ -48,6 +50,13 @@
       "pattern": "^sha256:[a-f0-9]{64}$"
     },
     "queue_id": { "type": "string" }
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["session_id"] },
+      { "required": ["required_roles"] },
+      { "required": ["message"] }
+    ]
   },
   "additionalProperties": true
 }

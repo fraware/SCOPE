@@ -406,7 +406,7 @@ def test_akta_review_rest_session_mode(client, tmp_path):
     summary = resp.json()
     assert summary["status"] == "session_required"
     assert summary["session_id"].startswith("SCOPE-SESS-")
-    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8"
+    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8.1"
     validate_artifact(summary, "scope_akta_review_session_summary.schema.json")
     assert (out_dir / "scope_review_packet.json").exists()
     assert not (out_dir / "scope_grant.json").exists()

@@ -18,6 +18,7 @@ EX = ROOT / "examples" / "protocol_drift"
 
 def test_summary_schema_fields() -> None:
     summary = {
+        "status": "completed",
         "packet_path": "/out/scope_review_packet.json",
         "decision_path": "/out/scope_decision.json",
         "grant_path": "/out/scope_grant.json",
@@ -58,6 +59,7 @@ def test_akta_review_summary_contract(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
     validate_artifact(summary, "scope_akta_review_summary.schema.json")
+    assert summary["status"] == "completed"
     assert summary["adapter_contract_version"] == AKTA_REVIEW_CONTRACT_VERSION
     assert summary["identity_assurance_level"] == "IAL0"
     assert summary["requested_scope"] == "protocol_draft"

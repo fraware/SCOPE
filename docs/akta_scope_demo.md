@@ -27,7 +27,7 @@ Outputs in `/tmp/akta_review_out/`:
 | `scope_grant.json` | Bounded authorization grant |
 | `summary.json` | Machine-readable contract summary (validated against schema) |
 
-`summary.json` includes `adapter_contract_version` (`scope-akta-review-v0.7`), `identity_assurance_level`, `signing_assurance_level`, and `production_mode`.
+`summary.json` includes `adapter_contract_version` (`scope-akta-review-v0.8.1`), branches on `status` (`completed` or `session_required`), and records `identity_assurance_level`, `signing_assurance_level`, and `production_mode` on completed summaries.
 
 SCOPE rejects overbroad `--grant-scope` values against the packet's `requested_scope`.
 
