@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://scope.dev/schemas/scope_akta_review_session_summary.schema.json",
   "title": "SCOPE AKTA Review Session Summary",
+  "description": "Adapter summary when multi-role review requires a session (status=session_required). Completed reviews use scope_akta_review_summary.schema.json.",
   "type": "object",
   "required": [
     "status",
@@ -18,13 +19,30 @@
     "session_id": { "type": "string" },
     "required_roles": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": { "type": "string" },
+      "minItems": 1
     },
     "message": { "type": "string" },
     "requested_scope": { "type": ["string", "null"] },
     "packet_path": { "type": "string" },
     "adapter_contract_version": { "type": "string" },
     "production_mode": { "type": "boolean" }
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["decision_path"] },
+      { "required": ["grant_path"] },
+      { "required": ["decision_id"] },
+      { "required": ["grant_id"] },
+      { "required": ["approved_scope"] },
+      { "required": ["identity_assurance_level"] },
+      { "required": ["signing_assurance_level"] },
+      { "required": ["allowed_tools"] },
+      { "required": ["blocked_tools"] },
+      { "required": ["decision_type"] },
+      { "required": ["scope_trust_root_hash"] },
+      { "required": ["queue_id"] }
+    ]
   },
   "additionalProperties": true
 }
