@@ -1,0 +1,27 @@
+{
+  "scenario": "registry_signed_decision",
+  "scope_version": "0.8.1",
+  "policy_version": "scope-core-v0.8",
+  "akta_review_contract_version": "scope-akta-review-v0.8.1",
+  "artifacts": [
+    {
+      "path": "scope_review_packet.json",
+      "schema": "scope_packet.schema.json"
+    },
+    {
+      "path": "scope_decision.json",
+      "schema": "scope_decision.schema.json"
+    },
+    {
+      "path": "scope_grant.json",
+      "schema": "scope_grant.schema.json"
+    },
+    {
+      "path": "summary.json",
+      "schema": "scope_akta_review_summary.schema.json"
+    },
+    {
+      "path": "quality_report_snippet.json"
+    }
+  ]
+}
