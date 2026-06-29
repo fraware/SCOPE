@@ -1,0 +1,23 @@
+{
+  "assigned_at": "2026-06-29T09:20:28Z",
+  "created_at": "2026-06-29T09:20:28Z",
+  "due_at": "2026-07-02T09:20:28Z",
+  "expired_at": "2026-06-29T09:20:28Z",
+  "in_review_at": "2026-06-29T09:20:28Z",
+  "packet_id": "SCOPE-PKT-2F8C44",
+  "packet_snapshot": {
+    "akta_admissibility": "review_required",
+    "packet_id": "SCOPE-PKT-2F8C44",
+    "requested_tool": "protocol_editor.draft_change",
+    "scientific_action_type": "A5_protocol_modification"
+  },
+  "queue_id": "SCOPE-QUEUE-840C50",
+  "queue_version": "0.8.0",
+  "reopened_at": "2026-06-29T09:20:28Z",
+  "reviewer": {
+    "reviewer_id": "reviewer_001",
+    "role": "protocol_owner"
+  },
+  "sla_hours": 72,
+  "status": "open"
+}
