@@ -41,3 +41,4 @@ ruff check scope tests evals adapters
 mypy scope
 pytest
 python evals/run_review_cases.py --extended
+python scripts/verify_pilot_fixtures.py
