@@ -1,5 +1,5 @@
 {
-  "adapter_contract_version": "scope-akta-review-v0.8",
+  "adapter_contract_version": "scope-akta-review-v0.8.1",
   "allowed_tools": [
     "protocol_editor.draft_change"
   ],
