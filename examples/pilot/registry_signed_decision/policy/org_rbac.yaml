@@ -1,0 +1,33 @@
+version: scope-core-v0.8
+org_units:
+  genomics_lab:
+    members:
+      ds1:
+        roles: [domain_scientist]
+      so1:
+        roles: [system_owner]
+      bio1:
+        roles: [biosecurity_reviewer]
+  clinical_research:
+    members:
+      clin1:
+        roles: [clinical_reviewer, domain_scientist]
+delegations:
+  - delegate_reviewer_id: ds1
+    role: domain_scientist
+    granted_to: ds2
+    valid_until: "2099-12-31T23:59:59Z"
+    granted_by: principal_investigator
+role_permissions:
+  domain_scientist:
+    can_submit_decisions: true
+    can_vote_in_session: true
+  system_owner:
+    can_submit_decisions: true
+    can_vote_in_session: true
+  biosecurity_reviewer:
+    can_submit_decisions: true
+    can_vote_in_session: true
+  clinical_reviewer:
+    can_submit_decisions: true
+    can_vote_in_session: true
