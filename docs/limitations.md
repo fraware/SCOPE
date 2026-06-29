@@ -1,12 +1,21 @@
 # Limitations
 
+## Implemented in v0.8.1
+
+- Summary contract split: `completed` vs `session_required` schemas; consumers branch on `summary.status`
+- `validate_summary_artifact()` on all AKTA review write paths (CLI, REST, Python API)
+- Conditional session grant provenance: schema if/then plus runtime check in `scope/session_provenance.py`
+- Centralized `resolve_reviewer_id()` for CLI, REST, and Python API
+- Verifiable pilot fixtures: per-scenario `manifest.json`, `expected_verification.json`, and `scripts/verify_pilot_fixtures.py`
+- AKTA review contract `scope-akta-review-v0.8.1` (incompatible summary schema split; supersedes v0.8.0 contract shape)
+
 ## Implemented in v0.8
 
 - `scope akta review --session` for multi-role packets: session summary schema, explicit failure without `--session`
 - `--reviewer-id` binding for registry signing (must match reviewer artifact)
 - Session grant provenance aggregation: contributing IAL/SAL, authority checks, veto roles, quorum policy hash
 - Pilot fixture pack under `examples/pilot/` (five institutional scenarios)
-- Policy bundle `scope-core-v0.8`; AKTA review contract `scope-akta-review-v0.8`
+- Policy bundle `scope-core-v0.8`
 
 ## Implemented in v0.7
 
