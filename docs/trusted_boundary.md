@@ -58,9 +58,26 @@ Claim mapping is configured in `policy/identity_mapping.yaml`. CLI: `scope ident
 
 See [identity_assurance.md](identity_assurance.md) and [rbac_scope_authority.md](rbac_scope_authority.md).
 
+## Identity providers (v0.10+)
+
+Pluggable IdP adapters in `scope/identity_providers.py`:
+
+| Provider | CLI / env | Assurance |
+|----------|-----------|-----------|
+| OIDC | `SCOPE_OIDC_*`, `scope identity verify-token` | IAL2–IAL4 with RBAC |
+| SAML | Pre-verified assertion JSON via sidecar | IAL2–IAL4 with RBAC |
+
+Production mode rejects IAL0 caller-supplied identity unless `SCOPE_ALLOW_DEV_IAL0=true`.
+
+Directory sync: `scope rbac sync --source scim|ldap --file policy/scim_snapshot.yaml`.
+
+## Signing (SAL4 KMS)
+
+Reference KMS adapter: `--signing-provider kms` with `SCOPE_KMS_REFERENCE_KEY_PATH` (dev) or `SCOPE_KMS_ENDPOINT` + `SCOPE_KMS_KEY_ID` (institutional).
+
 ## Ledger delivery
 
-Remote ledger append supports three delivery modes via `SCOPE_LEDGER_DELIVERY_MODE`:
+Remote ledger append supports delivery modes via `SCOPE_LEDGER_DELIVERY_MODE`:
 
 | Mode | Behavior |
 |------|----------|
@@ -68,7 +85,22 @@ Remote ledger append supports three delivery modes via `SCOPE_LEDGER_DELIVERY_MO
 | `at_least_once` | Spool failed remote deliveries for retry |
 | `fail_closed` | Block high-risk grant issuance when remote delivery fails |
 
-Authoritative tamper evidence remains the local hash-chained JSONL ledger. See [limitations.md](limitations.md).
+Additional sinks:
+
+| Sink | Environment |
+|------|-------------|
+| WORM | `SCOPE_LEDGER_WORM_PATH` |
+| Verified remote | `SCOPE_LEDGER_REMOTE_URL` + `SCOPE_LEDGER_VERIFIED_REMOTE=true` |
+
+Authoritative tamper evidence remains the local hash-chained JSONL ledger unless WORM/verified remote is configured. See [limitations.md](limitations.md).
+
+## Multi-tenant queues (v0.11+)
+
+Queue paths are namespaced by `X-Scope-Tenant-Id` header or `SCOPE_TENANT_ID`. REST callers may only access their tenant queue directory.
+
+## REST audit logging
+
+When `SCOPE_REST_AUDIT` is enabled (default), each REST request appends a `rest_api_audit` ledger event with caller, path, and tenant.
 
 ## Multi-reviewer sessions
 
@@ -86,7 +118,7 @@ Duplicate votes from the same reviewer are rejected. Votes are recorded in both 
 
 ## Policy version
 
-Active policy is tagged `scope-core-v0.8`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
+Active policy is tagged `scope-core-v1.0`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
 
 Session grants additionally record aggregated provenance: `contributing_identity_assurance_levels`, `contributing_authority_checks`, `minimum_identity_assurance_level`, `minimum_signing_assurance_level`, `veto_roles_applied`, and `quorum_policy_hash`. See [akta_review_contract.md](akta_review_contract.md).
 

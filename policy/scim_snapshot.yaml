@@ -1,0 +1,28 @@
+version: scope-core-v0.10
+description: SCIM directory snapshot for RBAC sync (import-only; not live SCIM API).
+users:
+  - id: ds1
+    userName: ds1@lab.example
+    active: true
+    roles: [domain_scientist]
+    org_unit: genomics_lab
+  - id: so1
+    userName: so1@lab.example
+    active: true
+    roles: [system_owner]
+    org_unit: genomics_lab
+  - id: ds2
+    userName: ds2@lab.example
+    active: true
+    roles: [domain_scientist]
+    org_unit: genomics_lab
+groups:
+  - id: scope-domain-scientist
+    displayName: SCOPE Domain Scientists
+    members: [ds1, ds2]
+delegations:
+  - delegate_reviewer_id: ds1
+    role: domain_scientist
+    granted_to: ds2
+    valid_until: "2099-12-31T23:59:59Z"
+    granted_by: principal_investigator

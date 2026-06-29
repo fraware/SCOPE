@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from scope.errors import GrantValidationError, ScopeValidationError
-from scope.signing import verify_artifact_signature
+from scope.signing import Signer, verify_artifact_signature
 
 logger = logging.getLogger(__name__)
 
@@ -132,17 +131,69 @@ def merge_signing_provenance(
 
 class HsmKmsSigningProvider:
     """
-    External HSM/KMS signing interface (SAL4).
+    Legacy alias for KMS signing interface (SAL4).
 
-    Production deployments integrate vendor SDKs behind this boundary.
-    SCOPE does not ship a fake HSM implementation.
+    Prefer ``scope.signing_providers.KmsSigningProvider`` with ``--signing-provider kms``.
     """
 
     def __init__(self, endpoint: str | None = None) -> None:
-        self.endpoint = endpoint or os.environ.get("SCOPE_HSM_ENDPOINT")
+        from scope.signing_providers import KmsSigningProvider
+
+        self._provider = KmsSigningProvider(endpoint=endpoint)
 
     def get_signer(self, *, reviewer_id: str | None = None) -> Any:
-        raise ScopeValidationError(
-            "HSM/KMS signing (SAL4) requires external provider integration. "
-            "Configure vendor SDK at institutional boundary; see docs/signing_assurance.md."
+        return self._provider.get_signer(reviewer_id=reviewer_id)
+
+
+class KmsHttpSigner(Signer):
+    """HTTP KMS boundary signer (institutional reference)."""
+
+    ALGORITHM = "kms_ed25519"
+
+    def __init__(self, *, endpoint: str, key_id: str) -> None:
+        self.endpoint = endpoint.rstrip("/")
+        self.key_id = key_id
+        self._public_key_ref = f"kms:{self.key_id}"
+
+    def public_key_ref(self) -> str:
+        return self._public_key_ref
+
+    def sign(self, payload: dict[str, Any], hash_field: str) -> str:
+        import base64
+        import json
+        import urllib.error
+        import urllib.request
+
+        if hash_field not in payload:
+            raise ScopeValidationError(f"Missing {hash_field} for KMS signing")
+        digest = payload[hash_field].removeprefix("sha256:")
+        body = json.dumps(
+            {"key_id": self.key_id, "message_hash": digest},
+            sort_keys=True,
+        ).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.endpoint}/sign",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.URLError as exc:
+            raise ScopeValidationError(f"KMS sign request failed: {exc}") from exc
+        signature_b64 = data.get("signature_b64") or data.get("signature")
+        if not signature_b64:
+            raise ScopeValidationError("KMS response missing signature field")
+        if all(c in "0123456789abcdef" for c in str(signature_b64).lower()):
+            return base64.b64encode(bytes.fromhex(str(signature_b64))).decode("ascii")
+        return str(signature_b64)
+
+    def verify(
+        self,
+        payload: dict[str, Any],
+        hash_field: str,
+        signature: str,
+        public_key_ref: str,
+    ) -> bool:
+        return False

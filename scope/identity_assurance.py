@@ -213,5 +213,19 @@ def is_institutional_assurance(level: str) -> bool:
     return level in (IAL3, IAL4)
 
 
+def enforce_production_identity(decision: dict[str, Any]) -> None:
+    """Reject IAL0 decisions at grant issue in production mode."""
+    from scope.config import allow_dev_ial0, is_production_mode
+
+    if not is_production_mode() or allow_dev_ial0():
+        return
+    level = (decision.get("provenance") or {}).get("identity_assurance_level", IAL0)
+    if level == IAL0:
+        raise ScopeValidationError(
+            "Production mode rejects IAL0 caller-supplied identity at grant issue. "
+            "Provide OIDC/SAML credentials or set SCOPE_ALLOW_DEV_IAL0 for development."
+        )
+
+
 def identity_assurance_from_env_enabled() -> bool:
     return oidc_enabled()

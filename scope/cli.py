@@ -356,6 +356,18 @@ def akta_group() -> None:
     default=False,
     help="Create review session when multi-role review is required.",
 )
+@click.option(
+    "--session-complete",
+    is_flag=True,
+    default=False,
+    help="Orchestrate multi-role session: create session, submit votes, issue grant.",
+)
+@click.option(
+    "--votes",
+    type=click.Path(exists=True),
+    default=None,
+    help="JSON manifest of reviewer/decision votes (required with --session-complete).",
+)
 @click.option("--policy", default="policy/", type=click.Path(exists=True))
 @click.option("--ledger", type=click.Path(), default=None)
 def akta_review(
@@ -371,6 +383,8 @@ def akta_review(
     queue_dir: str | None,
     identity_token: str | None,
     session: bool,
+    session_complete: bool,
+    votes: str | None,
     policy: str,
     ledger: str | None,
 ) -> None:
@@ -392,6 +406,8 @@ def akta_review(
         queue_dir=queue_dir,
         identity_token=identity_token,
         session_mode=session,
+        session_complete=session_complete,
+        votes=votes,
     )
     if summary.get("status") == "session_required":
         click.echo(
@@ -966,6 +982,29 @@ def review_queue_dashboard_cmd(out: str, queue_dir: str | None, policy: str) -> 
     click.echo(f"Queue dashboard -> {path}")
 
 
+@queue_group.command("sync-ticket")
+@click.option("--queue", "queue_path", required=True, type=click.Path(exists=True))
+@click.option(
+    "--adapter",
+    required=True,
+    type=click.Choice(["jira", "servicenow"]),
+)
+@click.option("--ticket-id", default=None, help="Existing ticket ID to update.")
+def review_queue_sync_ticket(queue_path: str, adapter: str, ticket_id: str | None) -> None:
+    from scope.review_queue import ReviewQueue
+
+    summary = ReviewQueue.load(queue_path).status_summary()
+    if adapter == "jira":
+        from adapters.workflow.jira import create_ticket, update_ticket
+
+        result = update_ticket(ticket_id, summary) if ticket_id else create_ticket(summary)
+    else:
+        from adapters.workflow.servicenow import create_ticket, update_ticket
+
+        result = update_ticket(ticket_id, summary) if ticket_id else create_ticket(summary)
+    click.echo(json.dumps(result, indent=2))
+
+
 @main.group("ledger")
 def ledger_group() -> None:
     """Ledger event recording."""
@@ -1046,6 +1085,33 @@ def identity_verify_token(token: str, policy: str) -> None:
             indent=2,
         )
     )
+
+
+@main.group("rbac")
+def rbac_group() -> None:
+    """Institutional RBAC sync."""
+
+
+@rbac_group.command("sync")
+@click.option(
+    "--source",
+    required=True,
+    type=click.Choice(["scim", "ldap"]),
+    help="Snapshot format source.",
+)
+@click.option("--file", "file_path", required=True, type=click.Path(exists=True))
+@click.option("--policy", default="policy/", type=click.Path(exists=True))
+@click.option("--out", default=None, type=click.Path(), help="Output org_rbac.yaml path.")
+def rbac_sync_cmd(source: str, file_path: str, policy: str, out: str | None) -> None:
+    from scope.rbac_sync import sync_rbac
+
+    target = sync_rbac(
+        source=source,
+        file_path=file_path,
+        policy_dir=policy,
+        out_path=out,
+    )
+    click.echo(f"RBAC synced -> {target}")
 
 
 @main.group("policy")

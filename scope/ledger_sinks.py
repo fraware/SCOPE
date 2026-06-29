@@ -202,7 +202,71 @@ class MultiSink(LedgerSink):
 
     def append(self, event: dict[str, Any], *, fail_closed: bool = False) -> None:
         for sink in self.sinks:
-            sink.append(event)
+            sink.append(event, fail_closed=fail_closed)
+
+
+class WormSink(LedgerSink):
+    """Write-once local sink emulating WORM storage semantics."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self._seq = 0
+        if self.path.is_file():
+            self._seq = sum(1 for _ in self.path.open(encoding="utf-8"))
+
+    def append(self, event: dict[str, Any], *, fail_closed: bool = False) -> str | None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        record = dict(event)
+        self._seq += 1
+        record["worm_seq"] = self._seq
+        record["worm_ack"] = True
+        with self.path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, sort_keys=True) + "\n")
+        return "worm_ack"
+
+
+class VerifiedRemoteSink(LedgerSink):
+    """Remote append sink verifying signed batch or Merkle root acknowledgment."""
+
+    def __init__(
+        self,
+        url: str,
+        *,
+        token: str | None = None,
+        timeout: float = 10.0,
+        verify_merkle: bool = True,
+    ) -> None:
+        self.url = url
+        self.token = token
+        self.timeout = timeout
+        self.verify_merkle = verify_merkle
+
+    @property
+    def is_remote(self) -> bool:
+        return True
+
+    def append(self, event: dict[str, Any], *, fail_closed: bool = False) -> str | None:
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        body = json.dumps(event, sort_keys=True).encode("utf-8")
+        req = urllib.request.Request(self.url, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            if resp.status >= 400:
+                raise urllib.error.URLError(f"HTTP {resp.status}")
+            ack_raw = resp.read().decode("utf-8")
+        ack: dict[str, Any] = {}
+        if ack_raw.strip():
+            ack = json.loads(ack_raw)
+            if self.verify_merkle:
+                merkle_root = ack.get("merkle_root")
+                batch_sig = ack.get("batch_signature")
+                if not merkle_root and not batch_sig:
+                    raise urllib.error.URLError(
+                        "Remote ledger ack missing merkle_root or batch_signature"
+                    )
+        event["remote_ack"] = ack
+        return "verified_remote_ack"
 
 
 def is_high_risk_ledger_event(event_type: str, metadata: dict[str, Any] | None = None) -> bool:
@@ -237,7 +301,18 @@ def build_ledger_sinks(
     remote_url = os.environ.get("SCOPE_LEDGER_REMOTE_URL")
     if remote_url:
         token = os.environ.get("SCOPE_LEDGER_REMOTE_TOKEN")
-        sinks.append(RemoteHttpSink(remote_url, token=token))
+        verified = os.environ.get("SCOPE_LEDGER_VERIFIED_REMOTE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        if verified:
+            sinks.append(VerifiedRemoteSink(remote_url, token=token))
+        else:
+            sinks.append(RemoteHttpSink(remote_url, token=token))
+    worm_path = os.environ.get("SCOPE_LEDGER_WORM_PATH")
+    if worm_path:
+        sinks.append(WormSink(worm_path))
     return sinks
 
 

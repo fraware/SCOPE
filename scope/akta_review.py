@@ -76,7 +76,8 @@ def _check_multi_role_requirement(engine: ScopeEngine, packet: dict[str, Any]) -
     ):
         raise ScopeValidationError(
             f"This action requires a multi-role review session (roles: {required}). "
-            "Re-run with --session to create a session, or use "
+            "Re-run with --session to create a session, --session-complete with "
+            "--votes to orchestrate votes and grant issue, or use "
             "`scope review session create` and vote workflow."
         )
 
@@ -136,6 +137,44 @@ def validate_summary_artifact(summary: dict[str, Any]) -> None:
         )
 
 
+def _load_json_ref(value: str | Path | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    with Path(value).open(encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _load_votes_manifest(votes: str | Path | list[Any] | dict[str, Any]) -> list[dict[str, Any]]:
+    if isinstance(votes, (str, Path)):
+        with Path(votes).open(encoding="utf-8") as fh:
+            raw = json.load(fh)
+    else:
+        raw = votes
+    if isinstance(raw, list):
+        entries = raw
+    elif isinstance(raw, dict):
+        entries = raw.get("votes") or raw.get("session_votes") or []
+    else:
+        raise ScopeValidationError("votes manifest must be a list or object with votes[]")
+    if not entries:
+        raise ScopeValidationError("votes manifest must contain at least one vote")
+    normalized: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ScopeValidationError("each vote entry must be an object")
+        reviewer = entry.get("reviewer")
+        decision = entry.get("decision")
+        if reviewer is None or decision is None:
+            raise ScopeValidationError("each vote requires reviewer and decision")
+        normalized.append(
+            {
+                "reviewer": _load_json_ref(reviewer),
+                "decision": _load_json_ref(decision),
+            }
+        )
+    return normalized
+
+
 def _write_session_summary(
     out: Path,
     *,
@@ -144,7 +183,6 @@ def _write_session_summary(
     required_roles: list[str],
     packet_path: Path,
 ) -> dict[str, Any]:
-    summary_path = out / "summary.json"
     requested_scope = packet["review_request"].get("requested_scope")
     summary: dict[str, Any] = {
         "status": "session_required",
@@ -153,15 +191,136 @@ def _write_session_summary(
         "required_roles": required_roles,
         "message": "Multi-role review session created; submit votes before grant issue.",
         "requested_scope": requested_scope,
-        "packet_path": str(packet_path),
+        "packet_path": str(packet_path).replace("\\", "/"),
         "adapter_contract_version": AKTA_REVIEW_CONTRACT_VERSION,
         "production_mode": is_production_mode(),
     }
     validate_summary_artifact(summary)
-    with summary_path.open("w", encoding="utf-8") as fh:
+    with (out / "summary.json").open("w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2, sort_keys=True)
         fh.write("\n")
     return summary
+
+
+def _write_completed_summary(
+    out: Path,
+    *,
+    packet: dict[str, Any],
+    packet_path: Path,
+    decision_path: Path,
+    grant_path: Path,
+    decision: dict[str, Any],
+    grant: dict[str, Any],
+    grant_scope: str,
+    queue_entry: Any | None = None,
+) -> dict[str, Any]:
+    auth = grant.get("authorization", {})
+    provenance = grant.get("provenance") or {}
+    requested_scope = packet["review_request"].get("requested_scope")
+    summary: dict[str, Any] = {
+        "status": "completed",
+        "packet_path": str(packet_path).replace("\\", "/"),
+        "decision_path": str(decision_path).replace("\\", "/"),
+        "grant_path": str(grant_path).replace("\\", "/"),
+        "packet_id": packet["packet_id"],
+        "decision_id": decision["decision_id"],
+        "grant_id": grant["grant_id"],
+        "approved_scope": auth.get("approved_scope", grant_scope),
+        "requested_scope": requested_scope,
+        "allowed_tools": auth.get("allowed_tools", []),
+        "blocked_tools": auth.get("blocked_tools", []),
+        "decision_type": decision["decision"]["type"],
+        "adapter_contract_version": AKTA_REVIEW_CONTRACT_VERSION,
+        "identity_assurance_level": provenance.get("identity_assurance_level", "IAL0"),
+        "signing_assurance_level": provenance.get("signing_assurance_level", "SAL0"),
+        "production_mode": is_production_mode(),
+        "scope_trust_root_hash": provenance.get("scope_trust_root_hash"),
+    }
+    if queue_entry is not None:
+        summary["queue_id"] = queue_entry.queue_id
+    validate_summary_artifact(summary)
+    with (out / "summary.json").open("w", encoding="utf-8") as fh:
+        json.dump(summary, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    return summary
+
+
+def _run_session_complete(
+    engine: ScopeEngine,
+    *,
+    packet: dict[str, Any],
+    votes: list[dict[str, Any]],
+    grant_scope: str,
+    out: Path,
+    signing_key: str | Path | None = None,
+    signing_provider: str | None = None,
+    queue_dir: str | Path | None = None,
+    identity_token: str | None = None,
+    enforce_rbac: bool | None = None,
+) -> dict[str, Any]:
+    session = engine.create_review_session(packet)
+    if engine.ledger.path:
+        engine.open_review(packet["packet_id"], actor_id=votes[0]["reviewer"].get("reviewer_id"))
+
+    decisions: list[dict[str, Any]] = []
+    for vote in votes:
+        reviewer_data = vote["reviewer"]
+        decision_input = vote["decision"]
+        resolved_id = resolve_reviewer_id(reviewer_data, None)
+        signer = _resolve_signer(
+            engine,
+            signing_key=signing_key,
+            signing_provider=signing_provider,
+            reviewer_id=resolved_id,
+        )
+        result = engine.submit_session_decision(
+            session,
+            packet,
+            reviewer_data,
+            decision_input,
+            identity_token=identity_token,
+            enforce_rbac=enforce_rbac,
+        )
+        if is_production_mode() or signer is not None:
+            if is_production_mode() and signer is None:
+                raise GrantValidationError(
+                    "Production mode requires signed session votes before grant issue."
+                )
+            assert signer is not None
+            result = engine.sign_decision(result, signer)
+        decisions.append(result)
+
+    grant = engine.issue_grant_from_session(session, packet, decisions)
+
+    queue_entry = None
+    if queue_dir is not None:
+        queue_entry = engine.create_review_queue(packet, queue_dir=queue_dir)
+        queue_entry.assign(votes[0]["reviewer"])
+        queue_entry.mark_in_review()
+        queue_entry.mark_decided(decisions[0]["decision_id"])
+        queue_entry.mark_granted(grant["grant_id"])
+        queue_entry.save()
+
+    packet_path = out / "scope_review_packet.json"
+    decision_path = out / "scope_decision.json"
+    grant_path = out / "scope_grant.json"
+
+    for path, data in ((packet_path, packet), (decision_path, decisions[0]), (grant_path, grant)):
+        with path.open("w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+
+    return _write_completed_summary(
+        out,
+        packet=packet,
+        packet_path=packet_path,
+        decision_path=decision_path,
+        grant_path=grant_path,
+        decision=decisions[0],
+        grant=grant,
+        grant_scope=grant_scope,
+        queue_entry=queue_entry,
+    )
 
 
 def run_akta_review(
@@ -179,6 +338,8 @@ def run_akta_review(
     queue_dir: str | Path | None = None,
     identity_token: str | None = None,
     session_mode: bool = False,
+    session_complete: bool = False,
+    votes: str | Path | list[Any] | dict[str, Any] | None = None,
     enforce_rbac: bool | None = None,
 ) -> dict[str, Any]:
     """Create packet, submit approval decision, issue grant; write artifacts to out_dir."""
@@ -194,11 +355,25 @@ def run_akta_review(
 
     resolved_reviewer_id = resolve_reviewer_id(reviewer_data, reviewer_id)
 
+    if session_complete:
+        if votes is None:
+            raise ScopeValidationError("--session-complete requires a votes manifest via --votes")
+        return _run_session_complete(
+            engine,
+            packet=packet,
+            votes=_load_votes_manifest(votes),
+            grant_scope=grant_scope,
+            out=out,
+            signing_key=signing_key,
+            signing_provider=signing_provider,
+            queue_dir=queue_dir,
+            identity_token=identity_token,
+            enforce_rbac=enforce_rbac,
+        )
+
     if session_mode:
         session = engine.create_review_session(packet)
-        required_roles = resolve_review_assignment(packet, engine.policy).get(
-            "required_roles", []
-        )
+        required_roles = resolve_review_assignment(packet, engine.policy).get("required_roles", [])
         packet_path = out / "scope_review_packet.json"
         with packet_path.open("w", encoding="utf-8") as fh:
             json.dump(packet, fh, indent=2, sort_keys=True)
@@ -236,8 +411,7 @@ def run_akta_review(
     if is_production_mode():
         if signer is None:
             raise GrantValidationError(
-                "Production mode requires a signed decision before grant issue. "
-                "Pass --signing-key or --signing-provider."
+                "Production mode requires a signed decision before grant issue."
             )
         decision = engine.sign_decision(decision, signer)
     elif signer is not None:
@@ -261,44 +435,20 @@ def run_akta_review(
     packet_path = out / "scope_review_packet.json"
     decision_path = out / "scope_decision.json"
     grant_path = out / "scope_grant.json"
-    summary_path = out / "summary.json"
 
-    for path, data in (
-        (packet_path, packet),
-        (decision_path, decision),
-        (grant_path, grant),
-    ):
+    for path, data in ((packet_path, packet), (decision_path, decision), (grant_path, grant)):
         with path.open("w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2, sort_keys=True)
             fh.write("\n")
 
-    auth = grant.get("authorization", {})
-    provenance = grant.get("provenance") or {}
-    requested_scope = packet["review_request"].get("requested_scope")
-    summary: dict[str, Any] = {
-        "status": "completed",
-        "packet_path": str(packet_path),
-        "decision_path": str(decision_path),
-        "grant_path": str(grant_path),
-        "packet_id": packet["packet_id"],
-        "decision_id": decision["decision_id"],
-        "grant_id": grant["grant_id"],
-        "approved_scope": auth.get("approved_scope", grant_scope),
-        "requested_scope": requested_scope,
-        "allowed_tools": auth.get("allowed_tools", []),
-        "blocked_tools": auth.get("blocked_tools", []),
-        "decision_type": decision["decision"]["type"],
-        "adapter_contract_version": AKTA_REVIEW_CONTRACT_VERSION,
-        "identity_assurance_level": provenance.get("identity_assurance_level", "IAL0"),
-        "signing_assurance_level": provenance.get("signing_assurance_level", "SAL0"),
-        "production_mode": is_production_mode(),
-        "scope_trust_root_hash": provenance.get("scope_trust_root_hash"),
-    }
-    if queue_entry is not None:
-        summary["queue_id"] = queue_entry.queue_id
-    validate_summary_artifact(summary)
-    with summary_path.open("w", encoding="utf-8") as fh:
-        json.dump(summary, fh, indent=2, sort_keys=True)
-        fh.write("\n")
-
-    return summary
+    return _write_completed_summary(
+        out,
+        packet=packet,
+        packet_path=packet_path,
+        decision_path=decision_path,
+        grant_path=grant_path,
+        decision=decision,
+        grant=grant,
+        grant_scope=grant_scope,
+        queue_entry=queue_entry,
+    )

@@ -477,11 +477,13 @@ class ScopeEngine:
         packet: dict[str, Any],
         decisions: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        from scope.identity_assurance import enforce_production_identity
         from scope.session_provenance import aggregate_session_grant_provenance
 
         resolution = session.resolve()
         first_id = resolution["contributing_decisions"][0]
         primary = next(d for d in decisions if d["decision_id"] == first_id)
+        enforce_production_identity(primary)
         merged = dict(primary)
         merged["decision"]["approved_scope"] = resolution["approved_scope"]
         merged["session_resolution"] = resolution
@@ -509,6 +511,7 @@ class ScopeEngine:
             merged,
             contributing_signatures=contributing_signatures,
         )
+        enforce_production_identity(primary)
         grant = self._finalize_grant_provenance(grant, merged)
         session_provenance = aggregate_session_grant_provenance(session, contributing_decisions)
         provenance = dict(grant.get("provenance") or {})
@@ -544,6 +547,9 @@ class ScopeEngine:
     ) -> dict[str, Any]:
         approved_scope = decision.get("decision", {}).get("approved_scope")
         grant = self._grant_engine.issue(packet, decision, constraints=constraints)
+        from scope.identity_assurance import enforce_production_identity
+
+        enforce_production_identity(decision)
         grant = self._finalize_grant_provenance(
             grant, decision, signing_provider=signing_provider
         )

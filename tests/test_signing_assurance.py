@@ -64,5 +64,5 @@ def test_minimum_policy_loaded() -> None:
 
 def test_hsm_provider_is_external_stub() -> None:
     provider = HsmKmsSigningProvider()
-    with pytest.raises(ScopeValidationError, match="HSM"):
+    with pytest.raises(ScopeValidationError, match="KMS"):
         provider.get_signer()

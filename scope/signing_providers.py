@@ -73,6 +73,39 @@ class RegistryKeyProvider(SigningProvider):
         return LocalPemProvider(resolved).get_signer(reviewer_id=rid)
 
 
+class KmsSigningProvider(SigningProvider):
+    """
+    Reference KMS signing adapter (SAL4).
+
+    Uses ``SCOPE_KMS_REFERENCE_KEY_PATH`` for local reference signing in dev/test,
+    or ``SCOPE_KMS_ENDPOINT`` + ``SCOPE_KMS_KEY_ID`` for institutional KMS HTTP boundary.
+    """
+
+    def __init__(
+        self,
+        *,
+        endpoint: str | None = None,
+        key_id: str | None = None,
+        reference_key_path: str | Path | None = None,
+    ) -> None:
+        self.endpoint = endpoint or os.environ.get("SCOPE_KMS_ENDPOINT")
+        self.key_id = key_id or os.environ.get("SCOPE_KMS_KEY_ID")
+        ref = reference_key_path or os.environ.get("SCOPE_KMS_REFERENCE_KEY_PATH")
+        self.reference_key_path = Path(ref) if ref else None
+
+    def get_signer(self, *, reviewer_id: str | None = None) -> Signer:
+        if self.reference_key_path and self.reference_key_path.is_file():
+            return Ed25519Signer(self.reference_key_path)
+        if self.endpoint and self.key_id:
+            from scope.signing_assurance import KmsHttpSigner
+
+            return KmsHttpSigner(endpoint=self.endpoint, key_id=self.key_id)
+        raise ScopeValidationError(
+            "KMS signing requires SCOPE_KMS_REFERENCE_KEY_PATH (reference) or "
+            "SCOPE_KMS_ENDPOINT + SCOPE_KMS_KEY_ID (institutional boundary)"
+        )
+
+
 def resolve_signing_provider(
     provider_name: str,
     *,
@@ -92,4 +125,6 @@ def resolve_signing_provider(
         if not reviewer_id:
             raise ScopeValidationError("registry signing provider requires --reviewer-id")
         return RegistryKeyProvider(policy_dir, reviewer_id=reviewer_id)
+    if normalized in ("kms", "hsm", "hsm_kms", "kms_sign"):
+        return KmsSigningProvider()
     raise ScopeValidationError(f"Unknown signing provider: {provider_name}")
