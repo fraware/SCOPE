@@ -1,4 +1,4 @@
-"""Tests for session grant provenance aggregation (SCOPE-3)."""
+"""Tests for session grant provenance aggregation (SCOPE-2)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,12 @@ from pathlib import Path
 from scope import ScopeEngine
 from scope.hash import compute_hash
 from scope.schema_util import validate_artifact
-from scope.session_provenance import aggregate_session_grant_provenance
+from scope.session_provenance import (
+    SESSION_PROVENANCE_FIELDS,
+    aggregate_session_grant_provenance,
+    is_session_grant_provenance,
+    validate_session_grant_provenance,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -72,16 +77,11 @@ def test_session_grant_includes_aggregated_provenance() -> None:
     assert prov["quorum_policy_hash"] == compute_hash(session.quorum_policy)
     assert prov["quorum_policy_hash"].startswith("sha256:")
 
-    session_fields = (
-        "contributing_identity_assurance_levels",
-        "contributing_authority_checks",
-        "minimum_identity_assurance_level",
-        "minimum_signing_assurance_level",
-        "veto_roles_applied",
-        "quorum_policy_hash",
-    )
+    session_fields = SESSION_PROVENANCE_FIELDS
     for field in session_fields:
         assert field in prov, f"missing session provenance field: {field}"
+    assert is_session_grant_provenance(prov)
+    validate_session_grant_provenance(prov)
     validate_artifact(grant, "scope_grant.schema.json")
 
 
