@@ -1,4 +1,4 @@
-version: scope-core-v0.7
+version: scope-core-v0.8
 minimum_level: SAL1
 high_risk_minimum_level: SAL3
 enforce_in_development: false
