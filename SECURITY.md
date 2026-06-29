@@ -4,40 +4,43 @@
 
 | Version | Supported | Notes |
 | ------- | --------- | ----- |
-| 1.0.x   | Yes       | Stable contract; security advisories for 1.0.x |
-| 0.11.x  | Yes       | Workflow release; migrate to 1.0 for contract freeze |
-| 0.10.x  | Yes       | Production-trust adapters |
-| 0.9.x   | Yes       | AKTA session-complete integration |
-| 0.8.x   | Yes       | Split AKTA summary contracts, pilot fixtures |
-| 0.7.x   | Limited   | Critical fixes only |
-| < 0.7   | No        | Upgrade required |
+| 0.8.x   | Yes       | Current release line; security fixes backported here |
+| 0.7.x   | Best effort | Prior institutional pilot line; upgrade to 0.8.x recommended |
+| 0.6.x and earlier | No | Unsupported; no security patches |
+
+Report issues against the latest **0.8.x** release on [main](https://github.com/fraware/SCOPE).
 
 ## Reporting a vulnerability
 
-Report security issues privately to the repository maintainers via GitHub Security Advisories on [fraware/SCOPE](https://github.com/fraware/SCOPE).
+Report security issues privately via GitHub Security Advisories on [fraware/SCOPE](https://github.com/fraware/SCOPE/security/advisories/new). Do not open public issues for undisclosed vulnerabilities.
 
-Include: affected version, reproduction steps, impact assessment, and suggested fix if available.
+## v0.8 security model
 
-## Security model (v0.8+)
+SCOPE v0.8.x builds on schema validation, canonical hashing, hash-chained ledger events, explicit expiration checks, and fail-closed behavior for unknown scopes, invalid roles, and forbidden queue transitions.
 
-SCOPE provides layered institutional trust boundaries:
+**Cryptography and signing**
 
-- **Identity assurance (IAL0–IAL4)**: OIDC/JWT verification, optional SAML assertion verify, org RBAC mapping. Production mode rejects caller-supplied identity JSON without verified tokens (`SCOPE_PRODUCTION_MODE=1`).
-- **Signing assurance (SAL0–SAL4)**: Ed25519 local keys, registry-backed keys, and reference KMS/HSM adapters. Minimum SAL enforced per scope in `policy/minimum_signing_assurance.yaml`.
-- **Authority provenance**: Two-stage RBAC + SCOPE authority checks with explicit `authority_checks` on decisions and grants.
-- **Ledger integrity**: Hash-chained local JSONL, optional remote/WORM sinks with `fail_closed` delivery for high-risk events.
-- **AKTA contract**: Split summary schemas (`completed` vs `session_required`); verifiable pilot fixture pack.
+- Ed25519 signatures on decisions and grants when production signing is enabled (`SCOPE_PRODUCTION_MODE`, minimum signing assurance policy in `policy/minimum_signing_assurance.yaml`)
+- Signing assurance levels (SAL0–SAL4) with registry key binding and reviewer public-key references; external HSM/KMS interface documented for SAL4 (`docs/signing_assurance.md`, `docs/key_management.md`)
+- Combined `scope_trust_root_hash` ties policy and reviewer registry integrity into decision, grant, and PCS export provenance
 
-SCOPE does **not** replace IRB, biosafety, EHS, or certify scientific safety. See [docs/limitations.md](docs/limitations.md).
+**Identity**
 
-## Cryptography
+- Identity assurance levels (IAL0–IAL4) with provenance on decisions and session grants (`scope/identity_assurance.py`, `docs/identity_assurance.md`)
+- Optional OIDC/JWT verification (`SCOPE_OIDC_*`, `scope identity verify-token`) for institutional identity claims; org RBAC in `policy/org_rbac.yaml` is separate from SCOPE scope authority
 
-- Decision and grant signatures use **Ed25519** (local PEM or registry-backed keys).
-- OIDC tokens verified via JWKS (RS256) or static public key.
-- Ledger events use SHA-256 hash chaining.
+**Ledger and delivery**
 
-## Operational hardening
+- Local hash-chained JSONL ledger with verification APIs
+- Optional remote HTTP append sink (`SCOPE_LEDGER_REMOTE_URL`); delivery semantics `best_effort`, `at_least_once` (spool), and `fail_closed` for high-risk grant issuance when remote delivery is required
+- Runtime violation and expiration events for PF feedback loops; remote sink is not a WORM or authoritative tamper-evident store
 
-For production deployment guidance see [docs/production_deployment.md](docs/production_deployment.md) and [docs/trusted_boundary.md](docs/trusted_boundary.md).
+**AKTA review contract**
 
-Threat model details: [docs/threat_model.md](docs/threat_model.md).
+- Signed `summary.json` artifacts validated against split schemas for `completed` vs `session_required` (`scope-akta-review-v0.8.1`); consumers must branch on `summary.status`
+
+**Known limits**
+
+- No live SAML/SCIM directory sync; RBAC and identity mapping are file-based
+- Reviewer judgment, domain safety, and physical lab safety are out of scope
+- See [docs/threat_model.md](docs/threat_model.md), [docs/trusted_boundary.md](docs/trusted_boundary.md), and [docs/limitations.md](docs/limitations.md) for residual risk and deployment boundaries.
