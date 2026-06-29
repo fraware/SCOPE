@@ -1,0 +1,51 @@
+version: scope-core-v0.8
+default_expiration:
+  protocol_draft:
+    expires_after:
+      - protocol_version_change
+      - evidence_state_change
+      - policy_version_change
+  single_validation_run_draft:
+    expires_after:
+      - single_use
+      - protocol_version_change
+      - evidence_state_change
+      - policy_version_change
+  active_protocol_update:
+    expires_after:
+      - protocol_version_change
+      - policy_version_change
+  robot_queue_submission:
+    expires_after:
+      - single_use
+      - protocol_version_change
+      - safety_incident
+  publication_claim:
+    expires_after:
+      - evidence_state_change
+      - policy_version_change
+  default:
+    expires_after:
+      - policy_version_change
+      - evidence_state_change
+modes:
+  - single_use
+  - time_based
+  - event_based
+  - version_based
+  - evidence_based
+  - policy_based
+  - reviewer_withdrawal
+  - manual_revocation
+triggers:
+  protocol_version_change: Invalidate when protocol_version differs from grant constraints.
+  evidence_state_change: Invalidate when evidence_state differs from grant context.
+  validation_status_change: Invalidate when validation_status changes.
+  policy_version_change: Invalidate when scope policy version changes.
+  domain_overlay_change: Invalidate when domain_overlay differs from grant constraints.
+  model_version_change: Invalidate when model_version differs from grant constraints.
+  tool_registry_change: Invalidate when tool_registry_version differs from grant context.
+  reviewer_withdrawal: Invalidate when reviewer withdraws approval (grant_revoked).
+  single_use: Invalidate after first successful tool use.
+  safety_incident: Invalidate on recorded safety incident.
+  completion_of_single_validation_run: Invalidate after validation run completes.
