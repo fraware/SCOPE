@@ -1,4 +1,4 @@
-version: scope-core-v0.7
+version: scope-core-v0.8
 hierarchy:
   - no_action
   - clarification_only
