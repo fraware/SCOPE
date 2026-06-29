@@ -113,7 +113,7 @@ def test_expired_delegation_invalidates_authority(tmp_path: Path) -> None:
     policy_dir = tmp_path / "policy"
     shutil.copytree(ROOT / "policy", policy_dir)
     org_rbac = {
-        "version": "scope-core-v0.7",
+        "version": "scope-core-v0.8",
         "org_units": {},
         "delegations": [
             {
