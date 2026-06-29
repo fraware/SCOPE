@@ -1,8 +1,8 @@
 {
   "checksums": {
-    "quality_report_snippet.json": "sha256:fc4d0f3857ed363ed3f8a8c298c15445140c5cca12bdf0c5506e1170b7018c36",
-    "scope_review_packet.json": "sha256:646694501a9e4cdc70aa48a6582950df06f8e0356695aacf58144f9a23b57fc6",
-    "summary.json": "sha256:2c3435097657e09cb2796bf86fd302e8d82b54d389eb1b14fdf327e4fbcf1045"
+    "quality_report_snippet.json": "sha256:c949d9e671baa36c95d6c8bb20fb0f30e571173835dff2bc269a4c9d95da8051",
+    "scope_review_packet.json": "sha256:654292d3b72dfef1fbd5aa38ed191abdfdab4b3a7244255226fa8e74fb9752ac",
+    "summary.json": "sha256:9061c4c9d4e517d5ed60ce562fcdbe2bb0fc2d98143ad3d3b9826e090dbda9b3"
   },
   "forbidden_files": [
     "scope_grant.json"

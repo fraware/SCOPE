@@ -17,13 +17,12 @@ if str(ROOT) not in sys.path:
 
 
 def file_sha256(path: Path) -> str:
+    data = path.read_bytes()
+    if path.suffix.lower() == ".json":
+        data = data.replace(b"\r\n", b"\n")
     digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(65536), b""):
-            digest.update(chunk)
+    digest.update(data)
     return f"sha256:{digest.hexdigest()}"
-
-
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
