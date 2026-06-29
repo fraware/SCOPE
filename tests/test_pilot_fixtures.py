@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -103,7 +105,7 @@ def test_pilot_summary_contract(scenario: str) -> None:
     spec = SCENARIOS[scenario]
     summary = json.loads((PILOT / scenario / "summary.json").read_text(encoding="utf-8"))
     assert summary["status"] == spec["summary_status"]
-    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8"
+    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8.1"
     schema = (
         "scope_akta_review_session_summary.schema.json"
         if spec["summary_status"] == "session_required"
@@ -116,3 +118,27 @@ def test_pilot_index_readme() -> None:
     readme = (PILOT / "README.md").read_text(encoding="utf-8")
     for scenario in SCENARIOS:
         assert scenario in readme
+
+
+def test_verify_pilot_fixtures_script() -> None:
+    """CI verifier script must pass on the committed fixture pack."""
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "verify_pilot_fixtures.py")],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+    assert "All 5 pilot fixture(s) verified." in result.stdout
+
+
+@pytest.mark.parametrize("scenario", list(SCENARIOS))
+def test_pilot_manifest_and_verification_files(scenario: str) -> None:
+    base = PILOT / scenario
+    assert (base / "manifest.json").is_file(), f"{scenario}: missing manifest.json"
+    assert (base / "expected_verification.json").is_file(), (
+        f"{scenario}: missing expected_verification.json"
+    )
+    manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["scenario"] == scenario
