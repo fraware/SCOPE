@@ -1,0 +1,48 @@
+version: scope-core-v0.8
+decision_types:
+  - approve
+  - approve_with_modifications
+  - approve_narrower_scope
+  - reject
+  - request_more_evidence
+  - request_replication
+  - escalate_to_higher_authority
+  - abstain_conflict_or_insufficient_expertise
+allowed_by_action:
+  A5_protocol_modification:
+    - approve_narrower_scope
+    - reject
+    - request_more_evidence
+    - escalate_to_higher_authority
+    - abstain_conflict_or_insufficient_expertise
+  A6_experimental_planning:
+    - approve
+    - approve_narrower_scope
+    - reject
+    - request_more_evidence
+    - abstain_conflict_or_insufficient_expertise
+  A7_resource_or_queue_prioritization:
+    - approve
+    - approve_narrower_scope
+    - reject
+    - escalate_to_higher_authority
+    - abstain_conflict_or_insufficient_expertise
+  A10_publication_or_claim_escalation:
+    - approve
+    - approve_narrower_scope
+    - reject
+    - request_more_evidence
+    - abstain_conflict_or_insufficient_expertise
+  default:
+    - approve
+    - approve_with_modifications
+    - approve_narrower_scope
+    - reject
+    - request_more_evidence
+    - request_replication
+    - escalate_to_higher_authority
+    - abstain_conflict_or_insufficient_expertise
+approval_decisions:
+  - approve
+  - approve_with_modifications
+  - approve_narrower_scope
