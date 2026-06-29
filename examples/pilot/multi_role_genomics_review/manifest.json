@@ -1,16 +1,27 @@
 {
   "scenario": "multi_role_genomics_review",
-  "scope_version": "0.8.1",
-  "policy_version": "scope-core-v0.8",
-  "akta_review_contract_version": "scope-akta-review-v0.8.1",
+  "scope_version": "1.0.0",
+  "policy_version": "scope-core-v1.0",
+  "akta_review_contract_version": "scope-akta-review-v1.0",
   "artifacts": [
     {
       "path": "scope_review_packet.json",
       "schema": "scope_packet.schema.json"
     },
     {
+      "path": "scope_decision.json",
+      "schema": "scope_decision.schema.json"
+    },
+    {
+      "path": "scope_grant.json",
+      "schema": "scope_grant.schema.json"
+    },
+    {
       "path": "summary.json",
-      "schema": "scope_akta_review_session_summary.schema.json"
+      "schema": "scope_akta_review_summary.schema.json"
+    },
+    {
+      "path": "votes.json"
     },
     {
       "path": "decision_protocol_owner.json"

@@ -234,6 +234,7 @@ def _run_akta_review_scenario(
 
     name = scenario["name"]
     session_mode = bool(scenario.get("session_mode"))
+    session_complete = bool(scenario.get("session_complete"))
     with tempfile.TemporaryDirectory() as out_dir:
         signing_key: Path | None = None
         if scenario.get("sign_before_grant"):
@@ -251,6 +252,8 @@ def _run_akta_review_scenario(
             out_dir=out_dir,
             signing_key=signing_key,
             session_mode=session_mode,
+            session_complete=session_complete,
+            votes=scenario.get("votes"),
         )
 
         if session_mode:
@@ -515,6 +518,7 @@ EXTENDED_SCENARIOS = [
     "fail_closed_grant_blocked.json",
     "akta_review_signed_summary.json",
     "akta_review_session_mode.json",
+    "akta_review_session_complete.json",
 ]
 
 

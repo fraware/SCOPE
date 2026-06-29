@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from scope.integration_versions import AKTA_REVIEW_CONTRACT_VERSION
 from scope.schema_util import validate_artifact
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,7 +31,10 @@ SCENARIOS = {
     "multi_role_genomics_review": {
         "required_files": [
             "scope_review_packet.json",
+            "scope_decision.json",
+            "scope_grant.json",
             "summary.json",
+            "votes.json",
             "reviewer_protocol_owner.json",
             "reviewer_domain_scientist.json",
             "decision_protocol_owner.json",
@@ -39,8 +43,8 @@ SCENARIOS = {
             "quality_report_snippet.json",
             "README.md",
         ],
-        "summary_status": "session_required",
-        "forbidden_files": ["scope_grant.json"],
+        "summary_status": "completed",
+        "policy_version": "scope-core-v1.0",
     },
     "expired_queue_reopen": {
         "required_files": [
@@ -92,9 +96,11 @@ def test_pilot_fixture_files_present(scenario: str) -> None:
 
 @pytest.mark.parametrize("scenario", list(SCENARIOS))
 def test_pilot_quality_snippet_policy_version(scenario: str) -> None:
+    spec = SCENARIOS[scenario]
     snippet_path = PILOT / scenario / "quality_report_snippet.json"
     snippet = json.loads(snippet_path.read_text(encoding="utf-8"))
-    assert snippet.get("policy_version") == "scope-core-v0.8"
+    expected = spec.get("policy_version", "scope-core-v0.8")
+    assert snippet.get("policy_version") == expected
 
 
 @pytest.mark.parametrize(
@@ -105,7 +111,7 @@ def test_pilot_summary_contract(scenario: str) -> None:
     spec = SCENARIOS[scenario]
     summary = json.loads((PILOT / scenario / "summary.json").read_text(encoding="utf-8"))
     assert summary["status"] == spec["summary_status"]
-    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8.1"
+    assert summary["adapter_contract_version"] == AKTA_REVIEW_CONTRACT_VERSION
     schema = (
         "scope_akta_review_session_summary.schema.json"
         if spec["summary_status"] == "session_required"

@@ -1,17 +1,18 @@
 {
   "checksums": {
-    "quality_report_snippet.json": "sha256:c949d9e671baa36c95d6c8bb20fb0f30e571173835dff2bc269a4c9d95da8051",
-    "scope_review_packet.json": "sha256:654292d3b72dfef1fbd5aa38ed191abdfdab4b3a7244255226fa8e74fb9752ac",
-    "summary.json": "sha256:9061c4c9d4e517d5ed60ce562fcdbe2bb0fc2d98143ad3d3b9826e090dbda9b3"
+    "quality_report_snippet.json": "sha256:2a87b022dd1ce8c8c9525310b93ee63db937b47c1ded01f52013cd6cf64f2853",
+    "scope_decision.json": "sha256:08d9d02b4b93da199f764234895d6a6ea4b240aa433e9641b34b97361969560a",
+    "scope_grant.json": "sha256:301fff20134c507dc1916a2c2eb60e17f9711439db0a46ef1bdc7edfa28ed5af",
+    "scope_review_packet.json": "sha256:09629eee028bb8cda2b3789542d1835d3908fc7c264187f0f40c5f74f8e6d20d",
+    "summary.json": "sha256:2733a7ba7c8c5a08ca5cd88cae9ae04bc9b1e5b5c197ab8bd3f21286d3ba1707"
   },
-  "forbidden_files": [
-    "scope_grant.json"
-  ],
+  "forbidden_files": [],
   "quality_report_snippet": {
-    "policy_version": "scope-core-v0.8"
+    "policy_version": "scope-core-v1.0"
   },
   "summary": {
-    "adapter_contract_version": "scope-akta-review-v0.8.1",
-    "status": "session_required"
+    "adapter_contract_version": "scope-akta-review-v1.0",
+    "approved_scope": "single_validation_run_draft",
+    "status": "completed"
   }
 }

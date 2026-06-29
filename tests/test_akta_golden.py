@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from scope import ScopeEngine
+from scope._version import __version__
 
 ROOT = Path(__file__).resolve().parent.parent
 NESTED = ROOT / "adapters" / "akta" / "examples" / "akta_record_nested.json"
@@ -35,4 +36,4 @@ def test_nested_akta_record_golden_mapping():
     assert constraints["allowed_next_steps"] == golden["allowed_next_steps"]
     assert req["requested_scope"] == golden["inferred_requested_scope"]
     assert req["scope_inference_source"] == golden["scope_inference_source"]
-    assert packet["packet_version"] == "0.8.1"
+    assert packet["packet_version"] == __version__

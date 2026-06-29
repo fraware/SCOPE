@@ -1,14 +1,26 @@
 {
-  "adapter_contract_version": "scope-akta-review-v0.8.1",
-  "message": "Multi-role review session created; submit votes before grant issue.",
-  "packet_id": "SCOPE-PKT-42A16F",
+  "adapter_contract_version": "scope-akta-review-v1.0",
+  "allowed_tools": [
+    "experiment_planner.create_validation_plan",
+    "protocol_editor.draft_change"
+  ],
+  "approved_scope": "single_validation_run_draft",
+  "blocked_tools": [
+    "lab_scheduler.prioritize",
+    "protocol_editor.update_active_protocol",
+    "robot_queue.submit"
+  ],
+  "decision_id": "SCOPE-DEC-DF0B16",
+  "decision_path": "examples/pilot/multi_role_genomics_review/scope_decision.json",
+  "decision_type": "approve_narrower_scope",
+  "grant_id": "SCOPE-GRANT-2EE9BA",
+  "grant_path": "examples/pilot/multi_role_genomics_review/scope_grant.json",
+  "identity_assurance_level": "IAL0",
+  "packet_id": "SCOPE-PKT-C1FD8D",
   "packet_path": "examples/pilot/multi_role_genomics_review/scope_review_packet.json",
   "production_mode": false,
   "requested_scope": "single_validation_run_draft",
-  "required_roles": [
-    "domain_scientist",
-    "protocol_owner"
-  ],
-  "session_id": "SCOPE-SESS-26AC2A",
-  "status": "session_required"
+  "scope_trust_root_hash": "sha256:6334c56aa73915315692177499c217399e2895bbab1ed6794040b1a2d49f0a77",
+  "signing_assurance_level": "SAL0",
+  "status": "completed"
 }

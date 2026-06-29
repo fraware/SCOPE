@@ -146,4 +146,5 @@ def test_ecosystem_demo_script_dry(tmp_path: Path) -> None:
     )
     assert completed.returncode == 0, completed.stderr or completed.stdout
     quality = json.loads((out_dir / "quality_report.json").read_text(encoding="utf-8"))
-    assert quality["summary"]["post_approval_runtime_violation_rate"] > 0
+    assert quality["metrics"]["post_approval_runtime_violation_rate"] > 0
+    assert quality["metrics"]["runtime_violation_outcome_count"] > 0

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from scope import ScopeEngine
 from scope.config import is_production_mode
@@ -141,7 +141,7 @@ def _load_json_ref(value: str | Path | dict[str, Any]) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
     with Path(value).open(encoding="utf-8") as fh:
-        return json.load(fh)
+        return cast(dict[str, Any], json.load(fh))
 
 
 def _load_votes_manifest(votes: str | Path | list[Any] | dict[str, Any]) -> list[dict[str, Any]]:

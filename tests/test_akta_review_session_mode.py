@@ -12,6 +12,7 @@ from scope import ScopeEngine
 from scope.akta_review import run_akta_review
 from scope.cli import main
 from scope.errors import ScopeValidationError
+from scope.integration_versions import AKTA_REVIEW_CONTRACT_VERSION
 from scope.schema_util import validate_artifact
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -74,7 +75,7 @@ def test_multi_role_with_session_creates_session(tmp_path: Path) -> None:
 
     on_disk = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
     validate_artifact(on_disk, "scope_akta_review_session_summary.schema.json")
-    assert on_disk["adapter_contract_version"] == "scope-akta-review-v0.8.1"
+    assert on_disk["adapter_contract_version"] == AKTA_REVIEW_CONTRACT_VERSION
 
 
 def test_akta_review_cli_session_flag(tmp_path: Path) -> None:
@@ -136,3 +137,25 @@ def test_akta_review_cli_multi_role_without_session_fails(tmp_path: Path) -> Non
     assert result.exit_code != 0
     message = str(result.exception or result.output)
     assert "multi-role review session" in message.lower() or "--session" in message
+
+
+def test_multi_role_session_complete_produces_grant(tmp_path: Path) -> None:
+    engine = ScopeEngine.from_policy_dir(ROOT / "policy")
+    weak = ROOT / "examples" / "weak_evidence_validation_review"
+    pilot = ROOT / "examples" / "pilot" / "multi_role_genomics_review"
+    out_dir = tmp_path / "complete_out"
+    summary = run_akta_review(
+        engine,
+        akta_record=json.loads((weak / "akta_record.json").read_text(encoding="utf-8")),
+        akta_trigger=json.loads((weak / "review_trigger.json").read_text(encoding="utf-8")),
+        grant_scope="single_validation_run_draft",
+        reviewer=pilot / "reviewer_protocol_owner.json",
+        decision_rationale="Session-complete path",
+        out_dir=out_dir,
+        session_complete=True,
+        votes=pilot / "votes.json",
+    )
+    assert summary["status"] == "completed"
+    assert summary["grant_id"].startswith("SCOPE-GRANT-")
+    assert (out_dir / "scope_grant.json").exists()
+    validate_artifact(summary, "scope_akta_review_summary.schema.json")

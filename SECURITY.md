@@ -4,43 +4,54 @@
 
 | Version | Supported | Notes |
 | ------- | --------- | ----- |
-| 0.8.x   | Yes       | Current release line; security fixes backported here |
-| 0.7.x   | Best effort | Prior institutional pilot line; upgrade to 0.8.x recommended |
-| 0.6.x and earlier | No | Unsupported; no security patches |
+| 1.0.x   | Yes       | Current stable line; contract freeze |
+| 0.11.x  | Yes       | Workflow release; security fixes backported when feasible |
+| 0.10.x  | Best effort | Production trust line; upgrade to 1.0.x recommended |
+| 0.9.x   | Best effort | Ecosystem demo line |
+| 0.8.x   | Best effort | Prior release line |
+| 0.7.x and earlier | No | Unsupported |
 
-Report issues against the latest **0.8.x** release on [main](https://github.com/fraware/SCOPE).
+Report issues against the latest **1.0.x** release on [main](https://github.com/fraware/SCOPE).
 
 ## Reporting a vulnerability
 
 Report security issues privately via GitHub Security Advisories on [fraware/SCOPE](https://github.com/fraware/SCOPE/security/advisories/new). Do not open public issues for undisclosed vulnerabilities.
 
-## v0.8 security model
+## v1.0 security model
 
-SCOPE v0.8.x builds on schema validation, canonical hashing, hash-chained ledger events, explicit expiration checks, and fail-closed behavior for unknown scopes, invalid roles, and forbidden queue transitions.
+SCOPE v1.0 builds on schema validation, canonical hashing, hash-chained ledger events, explicit expiration checks, and fail-closed behavior for unknown scopes, invalid roles, and forbidden queue transitions.
 
 **Cryptography and signing**
 
-- Ed25519 signatures on decisions and grants when production signing is enabled (`SCOPE_PRODUCTION_MODE`, minimum signing assurance policy in `policy/minimum_signing_assurance.yaml`)
-- Signing assurance levels (SAL0–SAL4) with registry key binding and reviewer public-key references; external HSM/KMS interface documented for SAL4 (`docs/signing_assurance.md`, `docs/key_management.md`)
-- Combined `scope_trust_root_hash` ties policy and reviewer registry integrity into decision, grant, and PCS export provenance
+- Ed25519 signatures on decisions and grants when production signing is enabled
+- Signing assurance levels (SAL0–SAL4) with KMS reference adapter (`--signing-provider kms`)
+- Combined `scope_trust_root_hash` ties policy and reviewer registry integrity into PCS export provenance
 
 **Identity**
 
-- Identity assurance levels (IAL0–IAL4) with provenance on decisions and session grants (`scope/identity_assurance.py`, `docs/identity_assurance.md`)
-- Optional OIDC/JWT verification (`SCOPE_OIDC_*`, `scope identity verify-token`) for institutional identity claims; org RBAC in `policy/org_rbac.yaml` is separate from SCOPE scope authority
+- Identity assurance levels (IAL0–IAL4); production mode rejects IAL0 unless `SCOPE_ALLOW_DEV_IAL0`
+- Pluggable OIDC and SAML providers (`scope/identity_providers.py`)
+- SCIM/LDAP RBAC sync via `scope rbac sync`
 
 **Ledger and delivery**
 
-- Local hash-chained JSONL ledger with verification APIs
-- Optional remote HTTP append sink (`SCOPE_LEDGER_REMOTE_URL`); delivery semantics `best_effort`, `at_least_once` (spool), and `fail_closed` for high-risk grant issuance when remote delivery is required
-- Runtime violation and expiration events for PF feedback loops; remote sink is not a WORM or authoritative tamper-evident store
+- Local hash-chained JSONL ledger with WORM and verified remote sink options
+- Delivery modes: `best_effort`, `at_least_once`, `fail_closed`
+- REST API audit logging to ledger
 
 **AKTA review contract**
 
-- Signed `summary.json` artifacts validated against split schemas for `completed` vs `session_required` (`scope-akta-review-v0.8.1`); consumers must branch on `summary.status`
+- Frozen at `scope-akta-review-v1.0`; consumers branch on `summary.status`
+
+**Workflow**
+
+- Tenant-isolated review queues via `X-Scope-Tenant-Id`
+- Webhook notifications on SLA breach
 
 **Known limits**
 
-- No live SAML/SCIM directory sync; RBAC and identity mapping are file-based
-- Reviewer judgment, domain safety, and physical lab safety are out of scope
-- See [docs/threat_model.md](docs/threat_model.md), [docs/trusted_boundary.md](docs/trusted_boundary.md), and [docs/limitations.md](docs/limitations.md) for residual risk and deployment boundaries.
+- SAML verification requires external sidecar or pre-verified assertions in reference adapter
+- Email notifications require institutional SMTP wiring
+- Reviewer judgment and physical lab safety remain out of scope
+
+See [docs/threat_model.md](docs/threat_model.md), [docs/trusted_boundary.md](docs/trusted_boundary.md), [docs/compatibility_matrix.md](docs/compatibility_matrix.md), and [docs/limitations.md](docs/limitations.md).

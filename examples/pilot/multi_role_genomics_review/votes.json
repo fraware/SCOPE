@@ -1,0 +1,12 @@
+{
+  "votes": [
+    {
+      "reviewer": "examples/pilot/multi_role_genomics_review/reviewer_domain_scientist.json",
+      "decision": "examples/pilot/multi_role_genomics_review/decision_domain_scientist.json"
+    },
+    {
+      "reviewer": "examples/pilot/multi_role_genomics_review/reviewer_protocol_owner.json",
+      "decision": "examples/pilot/multi_role_genomics_review/decision_protocol_owner.json"
+    }
+  ]
+}

@@ -72,4 +72,5 @@ uvicorn adapters.generic_rest.server:app --host 0.0.0.0 --port 8080 --workers 4
 ```bash
 scope quality report --ledger /var/scope/ledger.jsonl --out /tmp/quality.json
 python scripts/verify_pilot_fixtures.py
+python scripts/verify_ledger_chain.py /var/scope/ledger.jsonl
 ```

@@ -1,0 +1,126 @@
+{
+  "authorization": {
+    "allowed_tools": [
+      "experiment_planner.create_validation_plan",
+      "protocol_editor.draft_change"
+    ],
+    "approved_actions": [
+      "A6_experimental_planning"
+    ],
+    "approved_scope": "single_validation_run_draft",
+    "blocked_tools": [
+      "lab_scheduler.prioritize",
+      "protocol_editor.update_active_protocol",
+      "robot_queue.submit"
+    ],
+    "max_responsibility_level": "R5_experimental_planning"
+  },
+  "constraints": {
+    "domain_overlay": null,
+    "evidence_state": "E1_weak_signal",
+    "model_version": null,
+    "project_id": "demo_project",
+    "protocol_version": "protocol_v2",
+    "requires_pf_core_trace": true,
+    "requires_recording": true,
+    "single_use": true,
+    "tool_registry_version": null,
+    "validation_status": "V0_unvalidated"
+  },
+  "contributing_signatures": [
+    {
+      "decision_id": "SCOPE-DEC-DF0B16",
+      "reviewer_id": "reviewer_ds_001",
+      "reviewer_role": "domain_scientist"
+    },
+    {
+      "decision_id": "SCOPE-DEC-7C43FF",
+      "reviewer_id": "rev_po",
+      "reviewer_role": "protocol_owner"
+    }
+  ],
+  "created_at": "2026-06-29T21:28:39Z",
+  "expiration": {
+    "absolute_expiration": null,
+    "expires_after": [
+      "single_use",
+      "protocol_version_change",
+      "evidence_state_change",
+      "policy_version_change"
+    ]
+  },
+  "grant_hash": "sha256:087639c5666a3de94132f78b3fe7cf0ef5d6ac359d40bddf045bd3efbed8e77a",
+  "grant_id": "SCOPE-GRANT-2EE9BA",
+  "grant_version": "1.0.0",
+  "provenance": {
+    "akta_policy_hash": null,
+    "authority_checks": {
+      "delegation_id": null,
+      "rbac_enforced": false,
+      "rbac_role_valid": false,
+      "scope_approval_valid": true,
+      "scope_role_valid": true
+    },
+    "contributing_authority_checks": [
+      {
+        "authority_checks": {
+          "delegation_id": null,
+          "rbac_enforced": false,
+          "rbac_role_valid": false,
+          "scope_approval_valid": true,
+          "scope_role_valid": true
+        },
+        "decision_id": "SCOPE-DEC-DF0B16",
+        "reviewer_id": "reviewer_ds_001"
+      },
+      {
+        "authority_checks": {
+          "delegation_id": null,
+          "rbac_enforced": false,
+          "rbac_role_valid": false,
+          "scope_approval_valid": true,
+          "scope_role_valid": true
+        },
+        "decision_id": "SCOPE-DEC-7C43FF",
+        "reviewer_id": "rev_po"
+      }
+    ],
+    "contributing_identity_assurance_levels": [
+      {
+        "decision_id": "SCOPE-DEC-DF0B16",
+        "identity_assurance_level": "IAL0",
+        "identity_source": "caller_json",
+        "reviewer_id": "reviewer_ds_001",
+        "reviewer_role": "domain_scientist",
+        "role_resolution_source": "caller_supplied"
+      },
+      {
+        "decision_id": "SCOPE-DEC-7C43FF",
+        "identity_assurance_level": "IAL0",
+        "identity_source": "caller_json",
+        "reviewer_id": "rev_po",
+        "reviewer_role": "protocol_owner",
+        "role_resolution_source": "caller_supplied"
+      }
+    ],
+    "identity_assurance_level": "IAL0",
+    "identity_source": "caller_json",
+    "minimum_identity_assurance_level": "IAL0",
+    "minimum_signing_assurance_level": "SAL0",
+    "quorum_policy_hash": "sha256:e899af11cf5c678fb8fa8e3cda95b8d8d1c4a9b723cf4a4a7f33186c9fcafa67",
+    "reviewer_key_registry_hash": "sha256:13f8cdcc054ca19f6a2560cd9ae688c39ac289ddf3f2d3da4e6dd0081e883692",
+    "reviewer_key_registry_version": "scope-core-v0.8",
+    "reviewer_role_policy_hash": "sha256:68e578ddc7a35d2cfa38c5cb95bc51182d8801548158a28b35ca1e7a035e28ea",
+    "role_resolution_source": "caller_supplied",
+    "scope_policy_hash": "sha256:68e578ddc7a35d2cfa38c5cb95bc51182d8801548158a28b35ca1e7a035e28ea",
+    "scope_policy_version": "scope-core-v0.8",
+    "scope_trust_root_hash": "sha256:6334c56aa73915315692177499c217399e2895bbab1ed6794040b1a2d49f0a77",
+    "signing_assurance_level": "SAL0",
+    "veto_roles_applied": []
+  },
+  "source": {
+    "akta_record_id": "AKTA-SAR-S03",
+    "decision_id": "SCOPE-DEC-DF0B16",
+    "packet_id": "SCOPE-PKT-C1FD8D"
+  }
+}

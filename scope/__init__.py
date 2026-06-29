@@ -70,6 +70,25 @@ class ScopeEngine:
             session_store=session_store,
         )
 
+    @property
+    def tenant_id(self) -> str | None:
+        return getattr(self, "_tenant_id", None)
+
+    def effective_queue_dir(self, queue_dir: str | Path | None = None) -> Path:
+        """Resolve queue directory with optional tenant namespace."""
+        from scope.errors import ScopeValidationError
+        from scope.review_queue import resolve_queue_dir
+
+        if self.tenant_id and queue_dir:
+            raw = Path(queue_dir)
+            if raw.name and raw.name != self.tenant_id:
+                if list(raw.glob("SCOPE-QUEUE-*.json")) and raw.name != self.tenant_id:
+                    raise ScopeValidationError(
+                        f"Tenant {self.tenant_id!r} may not access queue directory "
+                        f"owned by {raw.name!r}"
+                    )
+        return resolve_queue_dir(queue_dir, tenant_id=self.tenant_id)
+
     def create_packet(
         self,
         akta_record: str | Path | dict[str, Any] | None = None,
@@ -726,7 +745,7 @@ class ScopeEngine:
 
     def quality_report(self, *, queue_dir: str | Path | None = None) -> dict[str, Any]:
         report = analyze_ledger(self.ledger.events(), self.policy)
-        qm = queue_metrics(queue_dir)
+        qm = queue_metrics(str(self.effective_queue_dir(queue_dir)))
         report["metrics"]["open_queue_count"] = qm["open_queue_count"]
         report["metrics"]["overdue_queue_count"] = qm["overdue_queue_count"]
         report["metrics"]["ledger_delivery_failure_count"] = self.ledger.delivery_failure_count
@@ -791,16 +810,18 @@ class ScopeEngine:
         sla_hours: int = 72,
         auto_assign: bool = False,
     ) -> ReviewQueue:
+        effective = self.effective_queue_dir(queue_dir)
+        persist = queue_dir is not None or self.tenant_id is not None
         entry = ReviewQueue.create(
             packet,
             sla_hours=sla_hours,
-            queue_dir=queue_dir,
-            persist=queue_dir is not None,
+            queue_dir=effective,
+            persist=persist,
         )
         if auto_assign:
             reviewer = resolve_auto_assign(packet, self.policy)
             entry.assign(reviewer)
-            if queue_dir:
+            if persist:
                 entry.save()
         return entry
 
@@ -812,7 +833,11 @@ class ScopeEngine:
     ) -> list[dict[str, Any]]:
         from scope.workflow_escalation import emit_sla_breach_events, scan_overdue_queues
 
-        breaches = scan_overdue_queues(queue_dir, self.policy.policy_dir, dry_run=dry_run)
+        breaches = scan_overdue_queues(
+            str(self.effective_queue_dir(queue_dir)),
+            self.policy.policy_dir,
+            dry_run=dry_run,
+        )
         if not dry_run:
             emit_sla_breach_events(self, breaches, policy_dir=self.policy.policy_dir)
         return breaches
@@ -941,7 +966,7 @@ class ScopeEngine:
         return entry
 
     def review_queue_status(self, *, queue_dir: str | Path | None = None) -> dict[str, Any]:
-        return aggregate_queue_status(queue_dir)
+        return aggregate_queue_status(str(self.effective_queue_dir(queue_dir)))
 
 
 __all__ = [
