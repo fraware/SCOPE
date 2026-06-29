@@ -1,5 +1,5 @@
 {
-  "adapter_contract_version": "scope-akta-review-v0.8",
+  "adapter_contract_version": "scope-akta-review-v0.8.1",
   "message": "Multi-role review session created; submit votes before grant issue.",
   "packet_id": "SCOPE-PKT-42A16F",
   "packet_path": "examples/pilot/multi_role_genomics_review/scope_review_packet.json",
