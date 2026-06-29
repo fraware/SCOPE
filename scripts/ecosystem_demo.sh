@@ -4,6 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+SCOPE_CMD=(python -m scope.cli)
 
 AKTA_TRIGGER="${AKTA_TRIGGER:-examples/protocol_drift/review_trigger.json}"
 AKTA_RECORD="${AKTA_RECORD:-examples/protocol_drift/akta_record.json}"
@@ -37,7 +39,7 @@ if [[ "$USE_REST" == "true" ]]; then
     --rest-url "$SCOPE_REST_URL" \
     "${SIGN_ARGS[@]/#/--signing-key }"
 else
-  scope akta review \
+  "${SCOPE_CMD[@]}" akta review \
     --akta-trigger "$AKTA_TRIGGER" \
     --akta-record "$AKTA_RECORD" \
     --grant-scope "$GRANT_SCOPE" \
@@ -58,7 +60,7 @@ PCS_OUT="$OUT_DIR/pcs_export"
 QUALITY_OUT="$OUT_DIR/quality_report.json"
 
 echo "== Step 2: SCOPE → PF obligation export =="
-scope export pf --grant "$GRANT" --out "$PF_OUT" --validate --live
+"${SCOPE_CMD[@]}" export pf --grant "$GRANT" --out "$PF_OUT" --validate --live
 
 echo "== Step 3: PF simulated block → SCOPE violation =="
 python scripts/pf_inject_violation.py \
@@ -68,7 +70,7 @@ python scripts/pf_inject_violation.py \
   ${SCOPE_REST_URL:+--rest-url "$SCOPE_REST_URL"}
 
 echo "== Step 4: SCOPE → PCS archive export =="
-scope export pcs \
+"${SCOPE_CMD[@]}" export pcs \
   --packet "$PACKET" \
   --decision "$DECISION" \
   --grant "$GRANT" \
@@ -78,9 +80,9 @@ scope export pcs \
   --policy "$POLICY"
 
 echo "== Step 5: Quality report (expect non-zero violation rate) =="
-scope quality report --ledger "$LEDGER" --out "$QUALITY_OUT" --queue-dir "$QUEUE_DIR"
+"${SCOPE_CMD[@]}" quality report --ledger "$LEDGER" --out "$QUALITY_OUT" --queue-dir "$QUEUE_DIR"
 
-python - <<'PY'
+python - "$QUALITY_OUT" <<'PY'
 import json, sys
 from pathlib import Path
 report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -91,6 +93,5 @@ print(f"runtime_violation_outcome_count={count}")
 if rate <= 0 or count <= 0:
     sys.exit("Expected non-zero runtime violation metrics after PF inject")
 PY
-"$QUALITY_OUT"
 
 echo "Ecosystem demo complete -> $OUT_DIR"
