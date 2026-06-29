@@ -1,4 +1,4 @@
-version: scope-core-v0.7
+version: scope-core-v0.8
 roles:
   domain_scientist:
     description: Reviews scientific plausibility, domain assumptions, and interpretation.
