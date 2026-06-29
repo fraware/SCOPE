@@ -1,6 +1,6 @@
 # Trusted Boundary
 
-SCOPE v0.7 assumes:
+SCOPE v0.8 assumes:
 
 - Reviewer identity is provided by a trusted caller, OIDC/JWT verification, or configured registry
 - Reviewer role assignments are correctly configured in policy YAML and, when enabled, `org_rbac.yaml`
@@ -11,7 +11,7 @@ SCOPE v0.7 assumes:
 - Session stores (JSON/SQLite) are protected at the filesystem level
 - Ledger delivery mode matches institutional risk tolerance (`SCOPE_LEDGER_DELIVERY_MODE`)
 
-SCOPE v0.7 does not guarantee reviewer competence, honesty, scientific truth, domain safety, legal compliance, or physical lab safety.
+SCOPE v0.8 does not guarantee reviewer competence, honesty, scientific truth, domain safety, legal compliance, or physical lab safety.
 
 ## Production mode and signing
 
@@ -86,7 +86,9 @@ Duplicate votes from the same reviewer are rejected. Votes are recorded in both 
 
 ## Policy version
 
-Active policy is tagged `scope-core-v0.7`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
+Active policy is tagged `scope-core-v0.8`. Grants record `provenance.scope_policy_version`; runtime context may include matching `scope_policy_version` for expiration checks.
+
+Session grants additionally record aggregated provenance: `contributing_identity_assurance_levels`, `contributing_authority_checks`, `minimum_identity_assurance_level`, `minimum_signing_assurance_level`, `veto_roles_applied`, and `quorum_policy_hash`. See [akta_review_contract.md](akta_review_contract.md).
 
 ## Trust root
 
