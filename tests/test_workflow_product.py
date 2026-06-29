@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from scope.notifications import LogSink, WebhookSink, emit_notification
 from scope.review_queue import resolve_queue_dir
 

@@ -413,6 +413,96 @@ def test_akta_review_rest_session_mode(client, tmp_path):
     assert not (out_dir / "scope_grant.json").exists()
 
 
+def test_akta_review_rest_session_complete(client, tmp_path):
+    from scope.schema_util import validate_artifact
+
+    weak = ROOT / "examples" / "weak_evidence_validation_review"
+    pilot = ROOT / "examples" / "pilot" / "multi_role_genomics_review"
+    out_dir = tmp_path / "akta_complete"
+    votes = json.loads((pilot / "votes.json").read_text(encoding="utf-8"))
+    payload = {
+        "akta_record": _load("akta_record.json", weak),
+        "akta_trigger": _load("review_trigger.json", weak),
+        "grant_scope": "single_validation_run_draft",
+        "reviewer": _load("reviewer_protocol_owner.json", pilot),
+        "decision_rationale": "REST session-complete path.",
+        "out_dir": str(out_dir),
+        "session_complete": True,
+        "votes": votes["votes"],
+    }
+    resp = client.post("/v0/akta/review", json=payload)
+    assert resp.status_code == 200
+    summary = resp.json()
+    assert summary["status"] == "completed"
+    assert summary["grant_id"].startswith("SCOPE-GRANT-")
+    assert (out_dir / "scope_grant.json").exists()
+    validate_artifact(summary, "scope_akta_review_summary.schema.json")
+
+
+def test_rest_audit_logging(client, tmp_path, monkeypatch):
+    from adapters.generic_rest import server
+    from scope.ledger import ScopeLedger
+
+    ledger_path = tmp_path / "audit_ledger.jsonl"
+    monkeypatch.setenv("SCOPE_LEDGER_PATH", str(ledger_path))
+    monkeypatch.setenv("SCOPE_REST_AUDIT", "true")
+    server.reset_engine_cache()
+
+    resp = client.post(
+        "/v0/packets",
+        json=_packet_payload(),
+        headers={"X-Scope-Caller-Id": "audit-test-caller"},
+    )
+    assert resp.status_code == 200
+
+    ledger = ScopeLedger(ledger_path)
+    audit_events = [e for e in ledger.events() if e["event_type"] == "rest_api_audit"]
+    assert audit_events
+    assert audit_events[-1]["metadata"]["caller"] == "audit-test-caller"
+    assert audit_events[-1]["metadata"]["path"] == "/v0/packets"
+
+
+def test_tenant_queue_isolation_rest(client, tmp_path):
+    from adapters.generic_rest import server
+
+    queue_base = tmp_path / "queues"
+    server.reset_engine_cache()
+    packet = client.post("/v0/packets", json=_packet_payload()).json()
+
+    created = client.post(
+        "/v0/review-queue",
+        json={"packet": packet, "sla_hours": 24, "queue_dir": str(queue_base)},
+        headers={"X-Scope-Tenant-Id": "lab-a"},
+    )
+    assert created.status_code == 200
+    queue_id = created.json()["queue_id"]
+    assert (queue_base / "lab-a" / f"{queue_id}.json").is_file()
+
+    listed_a = client.get(
+        "/v0/review-queue",
+        params={"queue_dir": str(queue_base)},
+        headers={"X-Scope-Tenant-Id": "lab-a"},
+    )
+    assert listed_a.status_code == 200
+    assert any(e["queue_id"] == queue_id for e in listed_a.json()["entries"])
+
+    listed_b = client.get(
+        "/v0/review-queue",
+        params={"queue_dir": str(queue_base)},
+        headers={"X-Scope-Tenant-Id": "lab-b"},
+    )
+    assert listed_b.status_code == 200
+    assert not any(e["queue_id"] == queue_id for e in listed_b.json()["entries"])
+
+    denied = client.post(
+        f"/v0/review-queue/{queue_id}/assign",
+        json={"reviewer": {"reviewer_id": "r1", "role": "protocol_owner"}},
+        params={"queue_dir": str(queue_base / "lab-a")},
+        headers={"X-Scope-Tenant-Id": "lab-b"},
+    )
+    assert denied.status_code == 403
+
+
 def test_akta_review_rest_reviewer_id_mismatch(client, tmp_path):
     out_dir = tmp_path / "akta_mismatch"
     payload = {
