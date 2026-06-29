@@ -11,6 +11,7 @@ from typing import Any
 
 PF_CORE_REPO_ENV = "PF_CORE_REPO_PATH"
 PCS_CORE_REPO_ENV = "PCS_CORE_REPO_PATH"
+AKTA_REPO_ENV = "AKTA_REPO_PATH"
 
 PF_VALIDATOR_CANDIDATES = (
     "scripts/validate_scope_obligation.py",

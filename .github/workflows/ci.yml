@@ -21,3 +21,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Run CI (install, lint, typecheck, tests, evals)
         run: bash scripts/ci.sh
+
+  live-ecosystem:
+    runs-on: ubuntu-latest
+    if: vars.PF_CORE_REPO_PATH != '' || vars.PCS_CORE_REPO_PATH != '' || vars.AKTA_REPO_PATH != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install SCOPE
+        run: pip install -e ".[dev]"
+      - name: Live contract tests
+        env:
+          PF_CORE_REPO_PATH: ${{ vars.PF_CORE_REPO_PATH }}
+          PCS_CORE_REPO_PATH: ${{ vars.PCS_CORE_REPO_PATH }}
+          AKTA_REPO_PATH: ${{ vars.AKTA_REPO_PATH }}
+        run: pytest tests/test_live_contracts.py -m live_contract -v

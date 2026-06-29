@@ -242,7 +242,7 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
         "post_approval_failure_rate": len(post_failures) / max(len(grants), 1),
         "post_approval_protocol_drift_rate": len(post_protocol_drift) / max(len(grants), 1),
         "post_approval_evidence_downgrade_rate": len(post_evidence_downgrade) / max(len(grants), 1),
-        "post_approval_runtime_violation_rate": len(violations) / max(len(grants), 1),
+        "post_approval_runtime_violation_rate": len(confirmed_violations) / max(len(grants), 1),
         "runtime_violation_outcome_count": len(confirmed_violations),
         "review_sla_breach_count": len(sla_breaches),
         "grant_use_count": len(grant_used),

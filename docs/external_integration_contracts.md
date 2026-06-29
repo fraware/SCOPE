@@ -1,4 +1,4 @@
-# External Integration Contracts (v0.7)
+# External Integration Contracts (v0.9)
 
 Formal field-mapping contracts for AKTA, PF-Core, PCS, and VSA integrations. These contracts define the shapes SCOPE produces or consumes locally; external repositories must implement compatible endpoints or adapters.
 
@@ -60,7 +60,7 @@ Evidence vocabulary mapping: [evidence_vocab_mapping.md](evidence_vocab_mapping.
 | `scope_grant.json` | Issued grant (`completed` only) |
 | `summary.json` | Adapter summary; schema selected by `summary.status` |
 
-Contract version: `scope-akta-review-v0.8.1`. Branch on `summary.status`:
+Contract version: `scope-akta-review-v0.9` (compatible with v0.8.1+ consumers). Branch on `summary.status`:
 
 | `summary.status` | Schema |
 |------------------|--------|
@@ -208,27 +208,45 @@ REST: full queue lifecycle under `/v0/review-queue/{id}/...`.
 
 Quality metrics: `open_queue_count`, `overdue_queue_count` (open statuses include `in_review`, `needs_information`, `escalated`).
 
-## Version alignment (v0.7)
+## Version alignment (v0.9)
 
 | Artifact | Version field | Expected value |
 |----------|---------------|----------------|
-| SCOPE package | `pyproject.toml` / `scope/_version.py` | `0.7.0` |
-| SCOPE packet | `packet_version` | `0.7.0` |
-| SCOPE grant | `grant_version` | `0.7.0` |
-| Quality report | `report_version` | `0.7` |
-| Review queue | `queue_version` | `0.7.0` |
-| AKTA review summary | `adapter_contract_version` | `scope-akta-review-v0.7` |
+| SCOPE package | `pyproject.toml` / `scope/_version.py` | `0.9.0` |
+| SCOPE packet | `packet_version` | `0.9.0` |
+| SCOPE grant | `grant_version` | `0.9.0` |
+| Quality report | `report_version` | `0.8` |
+| Review queue | `queue_version` | `0.9.0` |
+| AKTA review summary | `adapter_contract_version` | `scope-akta-review-v0.9` |
 | PF obligation | `obligation_version` | `pf-core-v0.5` |
 | PCS manifest | `manifest_version` | `pcs-v0.5` |
-| Policy bundle | `version` in YAML | `scope-core-v0.7` |
+| Policy bundle | `version` in YAML | `scope-core-v0.9` |
+
+## Environment paths and live demo
+
+Partner repositories are referenced via environment variables (never committed):
+
+| Variable | Required for | Example |
+|----------|--------------|---------|
+| `AKTA_REPO_PATH` | AKTA-side tooling / optional CI | `/opt/akta` |
+| `PF_CORE_REPO_PATH` | PF live validation + violation loop | `/opt/pf-core` |
+| `PCS_CORE_REPO_PATH` | PCS live validation | `/opt/pcs-core` |
+| `SCOPE_REST_URL` | REST demo (`scripts/akta_rest_review.py`) | `http://127.0.0.1:8765` |
+| `SCOPE_API_KEY` | Authenticated REST | (institutional secret) |
+| `VSA_API_URL` | Scheduled VSA re-fetch | `https://vsa.example/api` |
+| `VSA_API_TOKEN` | VSA bearer auth | (institutional secret) |
+
+One-command ecosystem demo: [ecosystem_demo.md](ecosystem_demo.md).
+
+PF violation feedback uses `scripts/pf_inject_violation.py` (loads `adapters/pf_core/export_obligation.py` output, records `runtime_scope_violation` via CLI or `POST /v0/ledger/violations`).
 
 ## External repo dependencies
 
 These integrations require live services or repositories not present in this repo:
 
 - **AKTA**: authoritative admissibility decisions and nested record storage
-- **PF-Core**: runtime obligation enforcement at tool invocation
-- **PCS**: release pipeline ingestion and institutional signing workflows
+- **PF-Core**: runtime obligation enforcement at tool invocation (`pf-core-v0.5`)
+- **PCS**: release pipeline ingestion and institutional signing workflows (`pcs-v0.5`)
 - **VSA**: live ScientificReport generation from validation pipelines
 
-Local adapters validate shapes and hashes by default. Cross-repo end-to-end tests run when env paths are configured (`tests/test_live_contracts.py`).
+Local adapters validate shapes and hashes by default. Cross-repo end-to-end tests run when env paths are configured (`tests/test_live_contracts.py`, optional CI job `live-ecosystem`).

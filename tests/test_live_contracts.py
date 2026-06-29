@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -77,3 +80,70 @@ def test_pcs_live_validation_when_repo_present(tmp_path):
     if "no PCS validator found" in message:
         pytest.skip(message)
     assert ok, message
+
+
+def test_pf_violation_inject_script(tmp_path: Path) -> None:
+    """PF violation loop produces non-zero quality metrics."""
+    engine = ScopeEngine.from_policy_dir(ROOT / "policy", ledger_path=tmp_path / "ledger.jsonl")
+    packet = engine.create_packet(EX / "akta_record.json", EX / "review_trigger.json")
+    decision = engine.submit_decision(
+        packet,
+        {"reviewer_id": "r1", "role": "protocol_owner"},
+        {"type": "approve_narrower_scope", "approved_scope": "protocol_draft", "rationale": "ok"},
+    )
+    grant = engine.issue_grant(packet, decision)
+    grant_path = tmp_path / "grant.json"
+    grant_path.write_text(json.dumps(grant, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    script = ROOT / "scripts" / "pf_inject_violation.py"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--grant",
+            str(grant_path),
+            "--ledger",
+            str(tmp_path / "ledger.jsonl"),
+            "--policy",
+            str(ROOT / "policy"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+
+    engine = ScopeEngine.from_policy_dir(ROOT / "policy", ledger_path=tmp_path / "ledger.jsonl")
+    report = engine.quality_report()
+    metrics = report.get("metrics", {})
+    assert metrics.get("post_approval_runtime_violation_rate", 0) > 0
+    assert metrics.get("runtime_violation_outcome_count", 0) > 0
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="ecosystem_demo.sh requires bash")
+def test_ecosystem_demo_script_dry(tmp_path: Path) -> None:
+    """Ecosystem demo script runs without live PF/PCS repos."""
+    out_dir = tmp_path / "demo_out"
+    ledger = tmp_path / "ledger.jsonl"
+    env = os.environ.copy()
+    env.pop(PF_CORE_REPO_ENV, None)
+    env.pop(PCS_CORE_REPO_ENV, None)
+    completed = subprocess.run(
+        [
+            "bash",
+            str(ROOT / "scripts" / "ecosystem_demo.sh"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=ROOT,
+        env={
+            **env,
+            "OUT_DIR": str(out_dir),
+            "LEDGER": str(ledger),
+            "QUEUE_DIR": str(tmp_path / "queues"),
+        },
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    quality = json.loads((out_dir / "quality_report.json").read_text(encoding="utf-8"))
+    assert quality["summary"]["post_approval_runtime_violation_rate"] > 0
