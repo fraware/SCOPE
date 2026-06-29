@@ -63,11 +63,11 @@ echo "== Step 2: SCOPE → PF obligation export =="
 "${SCOPE_CMD[@]}" export pf --grant "$GRANT" --out "$PF_OUT" --validate --live
 
 echo "== Step 3: PF simulated block → SCOPE violation =="
-python scripts/pf_inject_violation.py \
-  --grant "$GRANT" \
-  --ledger "$LEDGER" \
-  --policy "$POLICY" \
-  ${SCOPE_REST_URL:+--rest-url "$SCOPE_REST_URL"}
+VIOLATION_ARGS=(--grant "$GRANT" --ledger "$LEDGER" --policy "$POLICY")
+if [[ "$USE_REST" == "true" ]]; then
+  VIOLATION_ARGS+=(--rest-url "$SCOPE_REST_URL")
+fi
+python scripts/pf_inject_violation.py "${VIOLATION_ARGS[@]}"
 
 echo "== Step 4: SCOPE → PCS archive export =="
 "${SCOPE_CMD[@]}" export pcs \
