@@ -388,14 +388,21 @@ def akta_review(
         out_dir=out_dir,
         signing_key=signing_key,
         signing_provider=signing_provider,
+        reviewer_id=reviewer_id,
         queue_dir=queue_dir,
         identity_token=identity_token,
         session_mode=session,
     )
-    click.echo(
-        f"AKTA review complete: grant {summary['grant_id']} "
-        f"({summary['approved_scope']}) -> {out_dir}"
-    )
+    if summary.get("status") == "session_required":
+        click.echo(
+            f"Multi-role session required: {summary['session_id']} "
+            f"(roles: {', '.join(summary['required_roles'])}) -> {out_dir}"
+        )
+    else:
+        click.echo(
+            f"AKTA review complete: grant {summary['grant_id']} "
+            f"({summary['approved_scope']}) -> {out_dir}"
+        )
 
 
 @main.group("export")
