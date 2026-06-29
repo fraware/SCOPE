@@ -57,9 +57,36 @@ def reset_engine_cache() -> None:
 async def _scope_request_context(request: Request, call_next):  # type: ignore[no-untyped-def]
     token = _request_context.set(request)
     try:
-        return await call_next(request)
+        response = await call_next(request)
+        _audit_rest_request(request, response.status_code)
+        return response
     finally:
         _request_context.reset(token)
+
+
+def _audit_rest_request(request: Request, status_code: int) -> None:
+    """Append REST API audit event to ledger when enabled."""
+    if os.environ.get("SCOPE_REST_AUDIT", "true").lower() in ("0", "false", "no"):
+        return
+    if request.url.path in ("/docs", "/openapi.json", "/redoc"):
+        return
+    try:
+        engine = get_engine(request)
+        caller_hdr = request.headers.get("x-scope-caller-id")
+        caller = caller_hdr or (request.client.host if request.client else "unknown")
+        tenant = request.headers.get("x-scope-tenant-id")
+        engine.ledger.append(
+            "rest_api_audit",
+            metadata={
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": status_code,
+                "caller": caller,
+                "tenant_id": tenant,
+            },
+        )
+    except Exception:
+        pass
 
 
 def _signer_from_env(explicit: str | None = None) -> Ed25519Signer:
@@ -217,6 +244,8 @@ class AktaReviewRequest(BaseModel):
     identity_token: str | None = None
     queue_dir: str | None = None
     session_mode: bool = False
+    session_complete: bool = False
+    votes: list[dict[str, Any]] | None = None
 
 
 def _http_error(exc: Exception) -> HTTPException:
@@ -407,6 +436,8 @@ def akta_review(req: AktaReviewRequest) -> dict[str, Any]:
             identity_token=req.identity_token,
             queue_dir=req.queue_dir,
             session_mode=req.session_mode,
+            session_complete=req.session_complete,
+            votes=req.votes,
         )
         return summary
     except HTTPException:

@@ -52,6 +52,18 @@ def scan_overdue_queues(
             action["escalated"] = True
             action["escalation_reviewer"] = escalation_reviewer
             action["new_status"] = queue.status
+            from scope.notifications import emit_notification
+
+            emit_notification(
+                {
+                    "event_type": "review_sla_breached",
+                    "queue_id": queue.queue_id,
+                    "packet_id": summary.get("packet_id"),
+                    "due_at": summary.get("due_at"),
+                    "status": queue.status,
+                },
+                None,
+            )
         results.append(action)
     return results
 

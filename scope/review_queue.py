@@ -20,6 +20,21 @@ from scope.review_workflow import (
 from scope.schema_util import validate_artifact
 
 DEFAULT_QUEUE_DIR = Path(".scope/queues")
+
+
+def resolve_queue_dir(
+    queue_dir: str | Path | None = None,
+    *,
+    tenant_id: str | None = None,
+) -> Path:
+    """Resolve queue directory with optional tenant namespace."""
+    base = Path(queue_dir) if queue_dir else DEFAULT_QUEUE_DIR
+    if tenant_id:
+        safe = "".join(c for c in tenant_id if c.isalnum() or c in ("-", "_"))
+        if not safe:
+            raise ScopeValidationError("Invalid tenant_id for queue namespace")
+        return base / safe
+    return base
 DEFAULT_SLA_HOURS = 72
 
 
@@ -71,7 +86,7 @@ class ReviewQueue:
         queue = cls(artifact)
         queue.validate()
         if persist:
-            target_dir = Path(queue_dir) if queue_dir else DEFAULT_QUEUE_DIR
+            target_dir = resolve_queue_dir(queue_dir)
             queue.save(target_dir / f"{artifact['queue_id']}.json")
         return queue
 
@@ -286,8 +301,12 @@ class ReviewQueue:
         }
 
 
-def list_queue_files(queue_dir: str | Path | None = None) -> list[Path]:
-    root = Path(queue_dir) if queue_dir else DEFAULT_QUEUE_DIR
+def list_queue_files(
+    queue_dir: str | Path | None = None,
+    *,
+    tenant_id: str | None = None,
+) -> list[Path]:
+    root = resolve_queue_dir(queue_dir, tenant_id=tenant_id)
     if not root.is_dir():
         return []
     return sorted(root.glob("SCOPE-QUEUE-*.json"))

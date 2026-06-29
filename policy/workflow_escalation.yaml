@@ -4,3 +4,4 @@ escalation_reviewer:
   role: principal_investigator
 auto_escalate_status: true
 emit_ledger_events: true
+notify_webhook_url: null
