@@ -464,9 +464,15 @@ def list_review_queue(queue_dir: str | None = None) -> dict[str, Any]:
 
 
 def _find_queue_path(queue_id: str, queue_dir: str | None = None) -> Path:
+    from scope.errors import ScopeValidationError
     from scope.review_queue import ReviewQueue, list_queue_files
 
-    for path in list_queue_files(queue_dir):
+    engine = get_engine()
+    try:
+        effective = engine.effective_queue_dir(queue_dir)
+    except ScopeValidationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    for path in list_queue_files(effective):
         entry = ReviewQueue.load(path)
         if entry.queue_id == queue_id:
             return path
