@@ -15,7 +15,7 @@ def test_institutional_pilot_packet_regenerates():
     trigger = json.loads((PILOT / "review_trigger.json").read_text(encoding="utf-8"))
     packet = engine.create_packet(record, trigger)
     assert packet["review_request"]["scientific_action_type"] == "A5_protocol_modification"
-    assert packet["packet_version"] == "0.8.0"
+    assert packet["packet_version"] == "0.8.1"
     fixture = json.loads((PILOT / "scope_packet.json").read_text(encoding="utf-8"))
     for key in (
         "packet_version",
