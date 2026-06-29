@@ -1,4 +1,4 @@
-version: scope-core-v0.8
+version: scope-core-v1.0
 scopes:
   no_action:
     allowed_tools: []

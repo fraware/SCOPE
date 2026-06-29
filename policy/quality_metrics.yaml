@@ -1,4 +1,4 @@
-version: scope-core-v0.8
+version: scope-core-v1.0
 thresholds:
   rubber_stamp_min_review_seconds: 20
   rubber_stamp_high_risk_count: 10

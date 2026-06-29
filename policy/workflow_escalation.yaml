@@ -1,4 +1,4 @@
-version: scope-core-v0.8
+version: scope-core-v1.0
 escalation_reviewer:
   reviewer_id: pi1
   role: principal_investigator
