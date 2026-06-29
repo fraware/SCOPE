@@ -137,3 +137,25 @@ def test_akta_review_cli_multi_role_without_session_fails(tmp_path: Path) -> Non
     assert result.exit_code != 0
     message = str(result.exception or result.output)
     assert "multi-role review session" in message.lower() or "--session" in message
+
+
+def test_multi_role_session_complete_produces_grant(tmp_path: Path) -> None:
+    engine = ScopeEngine.from_policy_dir(ROOT / "policy")
+    weak = ROOT / "examples" / "weak_evidence_validation_review"
+    pilot = ROOT / "examples" / "pilot" / "multi_role_genomics_review"
+    out_dir = tmp_path / "complete_out"
+    summary = run_akta_review(
+        engine,
+        akta_record=json.loads((weak / "akta_record.json").read_text(encoding="utf-8")),
+        akta_trigger=json.loads((weak / "review_trigger.json").read_text(encoding="utf-8")),
+        grant_scope="single_validation_run_draft",
+        reviewer=pilot / "reviewer_protocol_owner.json",
+        decision_rationale="Session-complete path",
+        out_dir=out_dir,
+        session_complete=True,
+        votes=pilot / "votes.json",
+    )
+    assert summary["status"] == "completed"
+    assert summary["grant_id"].startswith("SCOPE-GRANT-")
+    assert (out_dir / "scope_grant.json").exists()
+    validate_artifact(summary, "scope_akta_review_summary.schema.json")

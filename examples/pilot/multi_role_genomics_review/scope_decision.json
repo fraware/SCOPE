@@ -3,7 +3,7 @@
     "requires_second_review": false,
     "reviewer_confidence": 0.72
   },
-  "decided_at": "2026-06-29T20:54:22Z",
+  "decided_at": "2026-06-29T21:28:39Z",
   "decision": {
     "approved_scope": "single_validation_run_draft",
     "rationale": "Co-review confirms draft-only validation scope given weak evidence.",
@@ -19,8 +19,8 @@
     ],
     "type": "approve_narrower_scope"
   },
-  "decision_hash": "sha256:0385200da0d0dc910b470e0dc0d6fc8f6c1d855cbe398fe41cfd0476ea8d0dc4",
-  "decision_id": "SCOPE-DEC-6E380C",
+  "decision_hash": "sha256:97f0c01735db33c84a9d2800519e40532eee6ea767978489c7c34a8050e04822",
+  "decision_id": "SCOPE-DEC-DF0B16",
   "expiration": {
     "expires_on": [
       "single_use",
@@ -30,7 +30,7 @@
     ],
     "mode": "event_based"
   },
-  "packet_id": "SCOPE-PKT-69E4DB",
+  "packet_id": "SCOPE-PKT-C1FD8D",
   "provenance": {
     "authority_checks": {
       "delegation_id": null,

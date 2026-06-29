@@ -9,7 +9,7 @@
       "robot_queue.submit"
     ]
   },
-  "created_at": "2026-06-29T09:19:52Z",
+  "created_at": "2026-06-29T21:28:39Z",
   "decision_options": [
     "approve",
     "approve_narrower_scope",
@@ -17,9 +17,9 @@
     "request_more_evidence",
     "abstain_conflict_or_insufficient_expertise"
   ],
-  "packet_hash": "sha256:a5f3c42561b8dfdde708c963dc014bd3e5fffe450ec587bc798c42e66d9f4241",
-  "packet_id": "SCOPE-PKT-42A16F",
-  "packet_version": "0.8.0",
+  "packet_hash": "sha256:50a502d2a01442270c591f04c3a7c6896044a79116a469938b853c8bf01337b0",
+  "packet_id": "SCOPE-PKT-C1FD8D",
+  "packet_version": "1.0.0",
   "review_artifacts": {
     "ai_output_summary": "Proposed validation run based on weak preliminary signal.",
     "evidence_report_ref": "VSA-REP-000012"
