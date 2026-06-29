@@ -56,11 +56,18 @@ Evidence vocabulary mapping: [evidence_vocab_mapping.md](evidence_vocab_mapping.
 | File | Description |
 |------|-------------|
 | `scope_review_packet.json` | Review packet |
-| `scope_decision.json` | Decision (signed in production mode) |
-| `scope_grant.json` | Issued grant |
-| `summary.json` | Adapter summary validated against `schemas/scope_akta_review_summary.schema.json` |
+| `scope_decision.json` | Decision (signed in production mode; `completed` only) |
+| `scope_grant.json` | Issued grant (`completed` only) |
+| `summary.json` | Adapter summary; schema selected by `summary.status` |
 
-Contract version: `scope-akta-review-v0.7`. Required `summary.json` fields include `adapter_contract_version`, `identity_assurance_level`, `signing_assurance_level`, and `production_mode`.
+Contract version: `scope-akta-review-v0.8.1`. Branch on `summary.status`:
+
+| `summary.status` | Schema |
+|------------------|--------|
+| `completed` | `schemas/scope_akta_review_summary.schema.json` (paths, IAL/SAL, approved scope) |
+| `session_required` | `schemas/scope_akta_review_session_summary.schema.json` (session_id, required_roles; no decision/grant artifacts) |
+
+Runtime validation: `scope.akta_review.validate_summary_artifact(summary)`.
 
 Full contract: [akta_review_contract.md](akta_review_contract.md).
 
