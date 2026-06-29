@@ -336,8 +336,8 @@ def test_quality_endpoint(client):
     resp = client.get("/v0/quality")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["report_version"] == "0.7"
-    assert body["policy_version"] == "scope-core-v0.7"
+    assert body["report_version"] == "0.8"
+    assert body["policy_version"] == "scope-core-v0.8"
     assert "metrics" in body
     assert "warnings" in body
 
@@ -385,6 +385,47 @@ def test_akta_review_rest_endpoint(client, tmp_path):
     assert summary["signing_assurance_level"] == "SAL0"
     assert summary["production_mode"] is is_production_mode()
     assert (out_dir / "scope_grant.json").exists()
+
+
+def test_akta_review_rest_session_mode(client, tmp_path):
+    from scope.schema_util import validate_artifact
+
+    weak = ROOT / "examples" / "weak_evidence_validation_review"
+    out_dir = tmp_path / "akta_session"
+    payload = {
+        "akta_record": _load("akta_record.json", weak),
+        "akta_trigger": _load("review_trigger.json", weak),
+        "grant_scope": "single_validation_run_draft",
+        "reviewer": _load("reviewer_protocol_owner.json", weak),
+        "decision_rationale": "REST session mode.",
+        "out_dir": str(out_dir),
+        "session_mode": True,
+    }
+    resp = client.post("/v0/akta/review", json=payload)
+    assert resp.status_code == 200
+    summary = resp.json()
+    assert summary["status"] == "session_required"
+    assert summary["session_id"].startswith("SCOPE-SESS-")
+    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8"
+    validate_artifact(summary, "scope_akta_review_session_summary.schema.json")
+    assert (out_dir / "scope_review_packet.json").exists()
+    assert not (out_dir / "scope_grant.json").exists()
+
+
+def test_akta_review_rest_reviewer_id_mismatch(client, tmp_path):
+    out_dir = tmp_path / "akta_mismatch"
+    payload = {
+        "akta_record": _load("akta_record.json", DRIFT),
+        "akta_trigger": _load("review_trigger.json", DRIFT),
+        "grant_scope": "protocol_draft",
+        "reviewer": _load("reviewer_protocol_owner.json", DRIFT),
+        "decision_rationale": "Mismatch test.",
+        "out_dir": str(out_dir),
+        "reviewer_id": "wrong_reviewer_id",
+    }
+    resp = client.post("/v0/akta/review", json=payload)
+    assert resp.status_code == 400
+    assert "does not match" in resp.json()["detail"]
 
 
 def test_drift_example_packet(client):

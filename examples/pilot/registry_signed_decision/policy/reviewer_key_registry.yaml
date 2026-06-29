@@ -1,0 +1,11 @@
+version: scope-core-v0.8
+description: 'Optional local registry mapping reviewer_id to expected public key references.
+
+  Institutions populate this file; empty registry skips identity binding checks.
+
+  '
+reviewers:
+  reviewer_001:
+    public_key_ref: sha256:2912c11a2264f747a8fe50f5496274a321c6592bd80e005cffb3ce1a2c987174
+    public_key_file: C:\Users\mateo\SCOPE\examples\pilot\registry_signed_decision\reviewer.pub
+    signing_key_path: c:\Users\mateo\SCOPE\examples\pilot\registry_signed_decision\reviewer.pem

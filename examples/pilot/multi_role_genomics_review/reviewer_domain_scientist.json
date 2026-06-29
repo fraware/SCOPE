@@ -1,0 +1,6 @@
+{
+  "reviewer_id": "reviewer_ds_001",
+  "role": "domain_scientist",
+  "declared_expertise": ["experimental_design", "validation_methods"],
+  "conflict_declared": false
+}

@@ -1,0 +1,40 @@
+{
+  "akta_constraints": {
+    "allowed_next_steps": [],
+    "blocked_tools": []
+  },
+  "created_at": "2026-06-29T09:20:28Z",
+  "decision_options": [
+    "approve_narrower_scope",
+    "reject",
+    "request_more_evidence",
+    "escalate_to_higher_authority",
+    "abstain_conflict_or_insufficient_expertise"
+  ],
+  "packet_hash": "sha256:30fd1b4021714344e70015335343e0dcdc06e723a666f3fcaabe08d06c1b0cd8",
+  "packet_id": "SCOPE-PKT-92CBAD",
+  "packet_version": "0.8.0",
+  "review_artifacts": {},
+  "review_request": {
+    "akta_admissibility": "review_required",
+    "requested_action": "draft_protocol",
+    "requested_scope": "protocol_draft",
+    "requested_tool": "protocol_editor.draft_change",
+    "required_review_roles": [
+      "protocol_owner"
+    ],
+    "scientific_action_type": "A5_protocol_modification",
+    "scope_inference_source": "akta_trigger"
+  },
+  "scientific_context": {
+    "deployment_profile": null,
+    "domain": null,
+    "domain_overlay": null,
+    "evidence_state": "E0_unknown",
+    "validation_status": null,
+    "verification_status": null
+  },
+  "source": {
+    "akta_record_id": "AKTA-PILOT-EXPIRED"
+  }
+}

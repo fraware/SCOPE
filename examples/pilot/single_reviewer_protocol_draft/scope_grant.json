@@ -1,0 +1,66 @@
+{
+  "authorization": {
+    "allowed_tools": [
+      "protocol_editor.draft_change"
+    ],
+    "approved_actions": [
+      "A5_protocol_modification"
+    ],
+    "approved_scope": "protocol_draft",
+    "blocked_tools": [
+      "lab_scheduler.prioritize",
+      "protocol_editor.update_active_protocol",
+      "robot_queue.submit"
+    ],
+    "max_responsibility_level": "R4_methodological_modification"
+  },
+  "constraints": {
+    "domain_overlay": null,
+    "evidence_state": "E2_preliminary_signal",
+    "model_version": null,
+    "project_id": "drift_demo",
+    "protocol_version": "protocol_v3",
+    "requires_pf_core_trace": true,
+    "requires_recording": true,
+    "single_use": false,
+    "tool_registry_version": null,
+    "validation_status": "V1_literature_supported"
+  },
+  "created_at": "2026-06-29T09:19:13Z",
+  "expiration": {
+    "absolute_expiration": null,
+    "expires_after": [
+      "protocol_version_change",
+      "evidence_state_change",
+      "policy_version_change"
+    ]
+  },
+  "grant_hash": "sha256:15695ae2507d6f6060ae51f184c1d48bb11964406add7997b8176a67ee9c30e3",
+  "grant_id": "SCOPE-GRANT-BCC845",
+  "grant_version": "0.8.0",
+  "provenance": {
+    "akta_policy_hash": null,
+    "authority_checks": {
+      "delegation_id": null,
+      "rbac_enforced": false,
+      "rbac_role_valid": false,
+      "scope_approval_valid": true,
+      "scope_role_valid": true
+    },
+    "identity_assurance_level": "IAL0",
+    "identity_source": "caller_json",
+    "reviewer_key_registry_hash": "sha256:13f8cdcc054ca19f6a2560cd9ae688c39ac289ddf3f2d3da4e6dd0081e883692",
+    "reviewer_key_registry_version": "scope-core-v0.8",
+    "reviewer_role_policy_hash": "sha256:68e578ddc7a35d2cfa38c5cb95bc51182d8801548158a28b35ca1e7a035e28ea",
+    "role_resolution_source": "caller_supplied",
+    "scope_policy_hash": "sha256:68e578ddc7a35d2cfa38c5cb95bc51182d8801548158a28b35ca1e7a035e28ea",
+    "scope_policy_version": "scope-core-v0.8",
+    "scope_trust_root_hash": "sha256:6334c56aa73915315692177499c217399e2895bbab1ed6794040b1a2d49f0a77",
+    "signing_assurance_level": "SAL0"
+  },
+  "source": {
+    "akta_record_id": "AKTA-SAR-DRIFT-001",
+    "decision_id": "SCOPE-DEC-874920",
+    "packet_id": "SCOPE-PKT-D2FA4B"
+  }
+}

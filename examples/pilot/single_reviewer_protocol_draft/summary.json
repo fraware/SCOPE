@@ -1,0 +1,25 @@
+{
+  "adapter_contract_version": "scope-akta-review-v0.8",
+  "allowed_tools": [
+    "protocol_editor.draft_change"
+  ],
+  "approved_scope": "protocol_draft",
+  "blocked_tools": [
+    "lab_scheduler.prioritize",
+    "protocol_editor.update_active_protocol",
+    "robot_queue.submit"
+  ],
+  "decision_id": "SCOPE-DEC-874920",
+  "decision_path": "examples\\pilot\\single_reviewer_protocol_draft\\scope_decision.json",
+  "decision_type": "approve_narrower_scope",
+  "grant_id": "SCOPE-GRANT-BCC845",
+  "grant_path": "examples\\pilot\\single_reviewer_protocol_draft\\scope_grant.json",
+  "identity_assurance_level": "IAL0",
+  "packet_id": "SCOPE-PKT-D2FA4B",
+  "packet_path": "examples\\pilot\\single_reviewer_protocol_draft\\scope_review_packet.json",
+  "production_mode": false,
+  "requested_scope": "protocol_draft",
+  "scope_trust_root_hash": "sha256:6334c56aa73915315692177499c217399e2895bbab1ed6794040b1a2d49f0a77",
+  "signing_assurance_level": "SAL0",
+  "status": "completed"
+}

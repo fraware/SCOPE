@@ -1,0 +1,6 @@
+{
+  "reviewer_id": "reviewer_001",
+  "role": "protocol_owner",
+  "declared_expertise": ["materials_protocols", "instrument_workflow"],
+  "conflict_declared": false
+}

@@ -42,7 +42,7 @@ def test_all_deferred_metrics_present():
     ]
     for key in expected:
         assert key in metrics, f"Missing metric: {key}"
-    assert report["report_version"] == "0.7"
+    assert report["report_version"] == "0.8"
 
 
 def test_low_evidence_warning_and_rate(tmp_path):

@@ -1,0 +1,57 @@
+{
+  "akta_constraints": {
+    "allowed_next_steps": [
+      "approve protocol draft for validation review",
+      "request additional evidence",
+      "reject active protocol update"
+    ],
+    "blocked_tools": [
+      "robot_queue.submit",
+      "lab_scheduler.prioritize"
+    ]
+  },
+  "created_at": "2026-06-29T09:21:11Z",
+  "decision_options": [
+    "approve_narrower_scope",
+    "reject",
+    "request_more_evidence",
+    "escalate_to_higher_authority",
+    "abstain_conflict_or_insufficient_expertise"
+  ],
+  "packet_hash": "sha256:c1d45994a32787986ee0add61e4490d39d5dafbd2845946725de13beefae679e",
+  "packet_id": "SCOPE-PKT-CBFEF4",
+  "packet_version": "0.8.0",
+  "review_artifacts": {
+    "ai_output_ref": "sha256:abc123",
+    "ai_output_summary": "The agent adjusted the timing window and acceptance threshold.",
+    "evidence_report_ref": "VSA-REP-000004",
+    "protocol_diff_ref": "sha256:def456"
+  },
+  "review_request": {
+    "akta_admissibility": "review_required",
+    "requested_action": "update_active_protocol",
+    "requested_scope": "active_protocol_update",
+    "requested_tool": "protocol_editor.update_active_protocol",
+    "required_review_roles": [
+      "protocol_owner"
+    ],
+    "responsibility_level": "R4_methodological_modification",
+    "scientific_action_type": "A5_protocol_modification",
+    "scope_inference_source": "tool_registry"
+  },
+  "scientific_context": {
+    "deployment_profile": "P4_protocol_drafting_assistant",
+    "domain": "materials",
+    "domain_overlay": "materials_v0.1",
+    "evidence_state": "E2_preliminary_signal",
+    "project_id": "demo_project",
+    "protocol_version": "protocol_v3",
+    "validation_status": "V1_literature_supported",
+    "verification_status": "Q0_unchecked"
+  },
+  "source": {
+    "akta_decision_id": "AKTA-DEC-000001",
+    "akta_record_id": "AKTA-SAR-000001",
+    "review_trigger_id": "AKTA-REVTRIG-000001"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "akta_constraints": {
+    "allowed_next_steps": [
+      "approve protocol draft for validation review"
+    ],
+    "blocked_tools": [
+      "robot_queue.submit"
+    ]
+  },
+  "created_at": "2026-06-29T09:19:13Z",
+  "decision_options": [
+    "approve_narrower_scope",
+    "reject",
+    "request_more_evidence",
+    "escalate_to_higher_authority",
+    "abstain_conflict_or_insufficient_expertise"
+  ],
+  "packet_hash": "sha256:3e5303be8276273134c17123b3f1db0f1ff39d14d18b5c6b1312980455b94465",
+  "packet_id": "SCOPE-PKT-D2FA4B",
+  "packet_version": "0.8.0",
+  "review_artifacts": {},
+  "review_request": {
+    "akta_admissibility": "review_required",
+    "requested_action": "update_active_protocol",
+    "requested_scope": "protocol_draft",
+    "requested_tool": "protocol_editor.update_active_protocol",
+    "required_review_roles": [
+      "protocol_owner"
+    ],
+    "responsibility_level": "R4_methodological_modification",
+    "scientific_action_type": "A5_protocol_modification",
+    "scope_inference_source": "akta_trigger"
+  },
+  "scientific_context": {
+    "domain": "materials",
+    "evidence_state": "E2_preliminary_signal",
+    "project_id": "drift_demo",
+    "protocol_version": "protocol_v3",
+    "validation_status": "V1_literature_supported",
+    "verification_status": "Q0_unchecked"
+  },
+  "source": {
+    "akta_record_id": "AKTA-SAR-DRIFT-001",
+    "review_trigger_id": "AKTA-REVTRIG-DRIFT-001"
+  }
+}

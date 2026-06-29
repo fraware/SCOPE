@@ -1,0 +1,21 @@
+version: scope-overlay-v0.6
+overlay_id: clinical_research
+description: Clinical research overlay requiring clinical and biosecurity co-review.
+mandatory_session_roles:
+  - clinical_reviewer
+  - biosecurity_reviewer
+matrix_overrides:
+  A10_publication_or_claim_escalation:
+    required_roles:
+      - domain_scientist
+      - clinical_reviewer
+      - biosecurity_reviewer
+    require_all: true
+  A6_validation_or_interpretation:
+    required_roles:
+      - domain_scientist
+      - clinical_reviewer
+    require_all: true
+notes: |
+  Enable via scientific_context.domain_overlay for patient-facing or clinical translation work.
+  Multi-role actions require review sessions; single-reviewer decisions are rejected.

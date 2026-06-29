@@ -1,0 +1,67 @@
+{
+  "confidence": {
+    "requires_second_review": false,
+    "reviewer_confidence": 0.5
+  },
+  "decided_at": "2026-06-29T09:21:11Z",
+  "decision": {
+    "approved_scope": "protocol_draft",
+    "rationale": "Registry-signed pilot approval.",
+    "rejected_scope": [
+      "protocol_diff_review",
+      "single_validation_plan",
+      "single_validation_run_draft",
+      "active_protocol_update",
+      "single_run_queue_priority",
+      "bounded_batch_priority",
+      "tool_permission_escalation",
+      "execution_payload_preparation",
+      "robot_queue_submission",
+      "publication_claim",
+      "scientific_memory_import"
+    ],
+    "type": "approve_narrower_scope"
+  },
+  "decision_hash": "sha256:bcb57da9be8afe2ddd5458e6ac76c7431f0cc6a533f6c7c92a95a02408ede6c1",
+  "decision_id": "SCOPE-DEC-6A5596",
+  "decision_signature": "fjNgL4Zy23t7hp/ERqcByRAY4pMoR9FY5LVmM3aAlEeJViL+bjfww/wiQbHynn3Nw+yWjr5LeFl9ryZbstMhBw==",
+  "expiration": {
+    "expires_on": [
+      "protocol_version_change",
+      "evidence_state_change",
+      "policy_version_change"
+    ],
+    "mode": "event_based"
+  },
+  "packet_id": "SCOPE-PKT-CBFEF4",
+  "provenance": {
+    "authority_checks": {
+      "delegation_id": null,
+      "rbac_enforced": false,
+      "rbac_role_valid": false,
+      "scope_approval_valid": true,
+      "scope_role_valid": true
+    },
+    "identity_assurance_level": "IAL1",
+    "identity_source": "local_signed_key",
+    "reviewer_key_registry_hash": "sha256:81922800365a353ba12fada4f663bcdcb609726b2380b6f27f765956b7b3bfa7",
+    "reviewer_key_registry_version": "scope-core-v0.8",
+    "role_resolution_source": "local_signed_key",
+    "scope_policy_hash": "sha256:68e578ddc7a35d2cfa38c5cb95bc51182d8801548158a28b35ca1e7a035e28ea",
+    "scope_policy_version": "scope-core-v0.8",
+    "scope_trust_root_hash": "sha256:9b28e2d9bcabdc76e9db48dc9edbe3e62e87f46f55cd26c017233debb69ddc77"
+  },
+  "reviewer": {
+    "conflict_declared": false,
+    "declared_expertise": [
+      "materials_protocols",
+      "instrument_workflow"
+    ],
+    "reviewer_id": "reviewer_001",
+    "reviewer_public_key_ref": "sha256:2912c11a2264f747a8fe50f5496274a321c6592bd80e005cffb3ce1a2c987174",
+    "role": "protocol_owner"
+  },
+  "reviewer_public_key_ref": "sha256:2912c11a2264f747a8fe50f5496274a321c6592bd80e005cffb3ce1a2c987174",
+  "signature_algorithm": "ed25519",
+  "signed_payload_hash": "sha256:bcb57da9be8afe2ddd5458e6ac76c7431f0cc6a533f6c7c92a95a02408ede6c1"
+}

@@ -256,7 +256,7 @@ def analyze_ledger(events: list[dict[str, Any]], policy: PolicyStore) -> dict[st
     by_action_type = _by_action_type(decisions, stale)
 
     return {
-        "report_version": "0.7",
+        "report_version": "0.8",
         "policy_version": policy.version,
         "summary": {
             "total_decisions": len(decisions),

@@ -1,6 +1,13 @@
 # Institutional Pilot Guide
 
-This guide supports workshop, funder, and lab pilots of SCOPE v0.7 alongside AKTA.
+This guide supports workshop, funder, and lab pilots of SCOPE v0.8 alongside AKTA.
+
+## v0.8 institutional additions
+
+- **`scope akta review --session`** for multi-role packets — session summary schema and vote workflow before grant issue — [akta_review_contract.md](akta_review_contract.md)
+- **`--reviewer-id` binding** when using `--signing-provider registry` — [key_management.md](key_management.md)
+- **Session grant provenance** on multi-reviewer grants (contributing IAL/SAL, authority checks, veto roles, quorum hash)
+- **Pilot fixture pack** — [examples/pilot/](../examples/pilot/) with five regenerated scenarios
 
 ## v0.7 institutional additions
 
@@ -38,7 +45,7 @@ This guide supports workshop, funder, and lab pilots of SCOPE v0.7 alongside AKT
 7. **Verify** — `scope verify --public-key` for auditor demonstration
 8. **Export** — PCS bundle for institutional record-keeping
 
-Sample artifacts: [examples/institutional_pilot/](../examples/institutional_pilot/)
+Sample artifacts: [examples/institutional_pilot/](../examples/institutional_pilot/). v0.8 pilot pack: [examples/pilot/](../examples/pilot/).
 
 ## Multi-reviewer pilot (A6)
 
@@ -64,7 +71,7 @@ Report includes reviewer metrics, warnings, queue counts, and event counts. Non-
 
 ## Lab integration checklist
 
-- [ ] Policy YAML reviewed and version-pinned (`scope-core-v0.7`)
+- [ ] Policy YAML reviewed and version-pinned (`scope-core-v0.8`)
 - [ ] Reviewer roles mapped to lab personnel
 - [ ] Ed25519 keypairs generated per reviewer role; public keys registered
 - [ ] PF-Core runtime configured to enforce grant obligations

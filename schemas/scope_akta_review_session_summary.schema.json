@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scope.dev/schemas/scope_akta_review_session_summary.schema.json",
+  "title": "SCOPE AKTA Review Session Summary",
+  "type": "object",
+  "required": [
+    "status",
+    "packet_id",
+    "session_id",
+    "required_roles",
+    "message",
+    "adapter_contract_version",
+    "production_mode"
+  ],
+  "properties": {
+    "status": { "const": "session_required" },
+    "packet_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "required_roles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "message": { "type": "string" },
+    "requested_scope": { "type": ["string", "null"] },
+    "packet_path": { "type": "string" },
+    "adapter_contract_version": { "type": "string" },
+    "production_mode": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

@@ -1,6 +1,6 @@
 # Institutional Pilot Examples
 
-Sample artifacts for SCOPE v0.7 institutional pilot workshops. See [docs/institutional_pilot_guide.md](../../docs/institutional_pilot_guide.md).
+Sample artifacts for SCOPE v0.8 institutional pilot workshops. See [docs/institutional_pilot_guide.md](../../docs/institutional_pilot_guide.md). For v0.8 pilot scenarios with queue and session workflows, see [examples/pilot/](../pilot/).
 
 | File | Description |
 |------|-------------|
@@ -15,7 +15,7 @@ Sample artifacts for SCOPE v0.7 institutional pilot workshops. See [docs/institu
 | decision.json | Decision input fixture |
 | current_context.json | Runtime context for grant check |
 
-Artifacts use policy bundle `scope-core-v0.7`. In production mode, sign decisions before grant issue; see [docs/trusted_boundary.md](../../docs/trusted_boundary.md).
+Artifacts use policy bundle `scope-core-v0.8`. In production mode, sign decisions before grant issue; see [docs/trusted_boundary.md](../../docs/trusted_boundary.md).
 
 To regenerate PCS export from these artifacts:
 

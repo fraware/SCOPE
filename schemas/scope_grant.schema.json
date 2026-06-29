@@ -100,6 +100,52 @@
             "delegation_id": { "type": ["string", "null"] }
           },
           "additionalProperties": false
+        },
+        "contributing_identity_assurance_levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["decision_id", "reviewer_id", "identity_assurance_level"],
+            "properties": {
+              "decision_id": { "type": "string" },
+              "reviewer_id": { "type": "string" },
+              "reviewer_role": { "type": "string" },
+              "identity_assurance_level": {
+                "type": "string",
+                "enum": ["IAL0", "IAL1", "IAL2", "IAL3", "IAL4"]
+              },
+              "role_resolution_source": { "type": "string" },
+              "identity_source": { "type": "string" }
+            }
+          }
+        },
+        "contributing_authority_checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["decision_id", "reviewer_id", "authority_checks"],
+            "properties": {
+              "decision_id": { "type": "string" },
+              "reviewer_id": { "type": "string" },
+              "authority_checks": { "type": "object" }
+            }
+          }
+        },
+        "minimum_identity_assurance_level": {
+          "type": "string",
+          "enum": ["IAL0", "IAL1", "IAL2", "IAL3", "IAL4"]
+        },
+        "minimum_signing_assurance_level": {
+          "type": "string",
+          "enum": ["SAL0", "SAL1", "SAL2", "SAL3", "SAL4"]
+        },
+        "veto_roles_applied": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "quorum_policy_hash": {
+          "type": "string",
+          "pattern": "^sha256:"
         }
       },
       "additionalProperties": true

@@ -1,4 +1,4 @@
-"""Scoped Scientific Authorization Protocol (SCOPE) v0.7.0."""
+"""Scoped Scientific Authorization Protocol (SCOPE) v0.8.0."""
 
 from __future__ import annotations
 
@@ -477,6 +477,8 @@ class ScopeEngine:
         packet: dict[str, Any],
         decisions: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        from scope.session_provenance import aggregate_session_grant_provenance
+
         resolution = session.resolve()
         first_id = resolution["contributing_decisions"][0]
         primary = next(d for d in decisions if d["decision_id"] == first_id)
@@ -484,8 +486,10 @@ class ScopeEngine:
         merged["decision"]["approved_scope"] = resolution["approved_scope"]
         merged["session_resolution"] = resolution
         contributing_signatures = []
+        contributing_decisions: list[dict[str, Any]] = []
         for decision in decisions:
             if decision["decision_id"] in resolution["contributing_decisions"]:
+                contributing_decisions.append(decision)
                 entry = {
                     "decision_id": decision["decision_id"],
                     "reviewer_id": decision["reviewer"]["reviewer_id"],
@@ -506,6 +510,13 @@ class ScopeEngine:
             contributing_signatures=contributing_signatures,
         )
         grant = self._finalize_grant_provenance(grant, merged)
+        session_provenance = aggregate_session_grant_provenance(session, contributing_decisions)
+        provenance = dict(grant.get("provenance") or {})
+        provenance.update(session_provenance)
+        grant["provenance"] = provenance
+        from scope.hash import attach_hash
+
+        grant = attach_hash(grant, "grant_hash")
         self._grant_engine.validate(grant)
         akta_blocked = packet.get("akta_constraints", {}).get("blocked_tools", [])
         grant_blocked = grant.get("authorization", {}).get("blocked_tools", [])

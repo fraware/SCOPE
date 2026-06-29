@@ -11,7 +11,7 @@
 
 **Scoped authorization for AI-shaped scientific work**
 
-[![Version](https://img.shields.io/badge/version-0.7.0-blue)](https://github.com/fraware/SCOPE/releases)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue)](https://github.com/fraware/SCOPE/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![CI](https://github.com/fraware/SCOPE/actions/workflows/ci.yml/badge.svg)](https://github.com/fraware/SCOPE/actions/workflows/ci.yml)
@@ -59,7 +59,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-Run the bundled evaluation scenarios (8 core; add `--extended` for 13 more, 21 total):
+Run the bundled evaluation scenarios (8 core; add `--extended` for 14 more, 22 total):
 
 ```bash
 python evals/run_review_cases.py
@@ -90,6 +90,10 @@ Outputs in `./out/akta_review/`:
 | `summary.json` | One-line status for automation |
 
 Full contract: [docs/akta_review_contract.md](docs/akta_review_contract.md). End-to-end demo: [docs/akta_scope_demo.md](docs/akta_scope_demo.md).
+
+For multi-role actions (for example A6 experimental planning), pass `--session` to create a review session instead of issuing a grant immediately. The command writes `summary.json` with `status: session_required` and a `session_id` for the vote workflow.
+
+Institutional pilot scenarios with regenerated artifacts: [examples/pilot/](examples/pilot/).
 
 ---
 
@@ -160,7 +164,7 @@ Returns `ALLOWED` or `BLOCKED`. Revoke or inspect status via `scope grant revoke
 
 Integration field mappings: [docs/external_integration_contracts.md](docs/external_integration_contracts.md). Optional REST API: install with `pip install -e ".[rest]"` and run `uvicorn adapters.generic_rest.server:app`.
 
-Institutional pilots: start with [docs/institutional_pilot_guide.md](docs/institutional_pilot_guide.md) and sample fixtures in [examples/institutional_pilot/](examples/institutional_pilot/).
+Institutional pilots: start with [docs/institutional_pilot_guide.md](docs/institutional_pilot_guide.md). Workshop fixtures: [examples/institutional_pilot/](examples/institutional_pilot/). v0.8 pilot pack: [examples/pilot/](examples/pilot/).
 
 ---
 
@@ -209,7 +213,7 @@ bash scripts/ci.sh
 .\scripts\ci.ps1
 ```
 
-CI runs on Python 3.10, 3.11, and 3.12: `ruff` lint, `mypy` typecheck, `pytest`, and all 21 evaluation scenarios with `--extended`.
+CI runs on Python 3.10, 3.11, and 3.12: `ruff` lint, `mypy` typecheck, `pytest`, and all 22 evaluation scenarios with `--extended`.
 
 Individual commands:
 
@@ -230,7 +234,7 @@ python evals/run_review_cases.py --extended
 | `policy/` | YAML policy bundles and domain overlays |
 | `adapters/` | AKTA, VSA, PF-Core, PCS, and REST integrations |
 | `examples/` | Scenario fixtures for docs and evals |
-| `evals/` | 8 core + 13 extended evaluation scenarios |
+| `evals/` | 8 core + 14 extended evaluation scenarios |
 | `tests/` | Pytest suite |
 | `docs/` | Protocol and integration documentation |
 

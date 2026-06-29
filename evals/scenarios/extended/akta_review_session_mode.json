@@ -1,0 +1,27 @@
+{
+  "name": "akta_review_session_mode",
+  "run_akta_review": true,
+  "session_mode": true,
+  "akta_record": {
+    "record_id": "AKTA-EVAL-SESSION",
+    "scientific_action_type": "A6_experimental_planning"
+  },
+  "akta_trigger": {
+    "akta_admissibility": "review_required",
+    "scientific_action_type": "A6_experimental_planning",
+    "requested_action": "plan_validation",
+    "requested_tool": "experiment_planner.create_validation_plan",
+    "requested_scope": "single_validation_plan",
+    "scientific_context": {
+      "protocol_version": "protocol_v1",
+      "evidence_state": "E1_hypothesis"
+    }
+  },
+  "reviewer": {"reviewer_id": "po1", "role": "protocol_owner"},
+  "decision": {
+    "type": "approve_narrower_scope",
+    "approved_scope": "single_validation_plan",
+    "rationale": "Session mode AKTA review contract validation"
+  },
+  "grant_scope": "single_validation_plan"
+}

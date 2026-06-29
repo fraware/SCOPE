@@ -1,0 +1,52 @@
+{
+  "akta_constraints": {
+    "allowed_next_steps": [
+      "approve validation draft only",
+      "request additional evidence",
+      "reject experimental plan"
+    ],
+    "blocked_tools": [
+      "robot_queue.submit"
+    ]
+  },
+  "created_at": "2026-06-29T09:19:52Z",
+  "decision_options": [
+    "approve",
+    "approve_narrower_scope",
+    "reject",
+    "request_more_evidence",
+    "abstain_conflict_or_insufficient_expertise"
+  ],
+  "packet_hash": "sha256:a5f3c42561b8dfdde708c963dc014bd3e5fffe450ec587bc798c42e66d9f4241",
+  "packet_id": "SCOPE-PKT-42A16F",
+  "packet_version": "0.8.0",
+  "review_artifacts": {
+    "ai_output_summary": "Proposed validation run based on weak preliminary signal.",
+    "evidence_report_ref": "VSA-REP-000012"
+  },
+  "review_request": {
+    "akta_admissibility": "review_required",
+    "requested_action": "plan_validation_experiment",
+    "requested_scope": "single_validation_run_draft",
+    "requested_tool": "experiment_planner.create_validation_plan",
+    "required_review_roles": [
+      "domain_scientist",
+      "protocol_owner"
+    ],
+    "responsibility_level": "R5_experimental_planning",
+    "scientific_action_type": "A6_experimental_planning",
+    "scope_inference_source": "tool_registry"
+  },
+  "scientific_context": {
+    "domain": "materials",
+    "evidence_state": "E1_weak_signal",
+    "project_id": "demo_project",
+    "protocol_version": "protocol_v2",
+    "validation_status": "V0_unvalidated"
+  },
+  "source": {
+    "akta_decision_id": "AKTA-DEC-S03",
+    "akta_record_id": "AKTA-SAR-S03",
+    "review_trigger_id": "TRIG-S03"
+  }
+}

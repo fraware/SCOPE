@@ -103,6 +103,54 @@ def _resolve_signer(
     return None
 
 
+def _resolve_reviewer_id(
+    reviewer_data: dict[str, Any],
+    reviewer_id: str | None,
+) -> str:
+    """Validate optional CLI reviewer_id against reviewer artifact."""
+    artifact_id = reviewer_data.get("reviewer_id")
+    if reviewer_id is not None:
+        if not artifact_id:
+            raise ScopeValidationError("Reviewer artifact missing reviewer_id")
+        if str(reviewer_id) != str(artifact_id):
+            raise ScopeValidationError(
+                f"--reviewer-id {reviewer_id!r} does not match reviewer artifact "
+                f"reviewer_id {artifact_id!r}"
+            )
+        return str(reviewer_id)
+    if not artifact_id:
+        raise ScopeValidationError("Reviewer artifact missing reviewer_id")
+    return str(artifact_id)
+
+
+def _write_session_summary(
+    out: Path,
+    *,
+    packet: dict[str, Any],
+    session_id: str,
+    required_roles: list[str],
+    packet_path: Path,
+) -> dict[str, Any]:
+    summary_path = out / "summary.json"
+    requested_scope = packet["review_request"].get("requested_scope")
+    summary: dict[str, Any] = {
+        "status": "session_required",
+        "packet_id": packet["packet_id"],
+        "session_id": session_id,
+        "required_roles": required_roles,
+        "message": "Multi-role review session created; submit votes before grant issue.",
+        "requested_scope": requested_scope,
+        "packet_path": str(packet_path),
+        "adapter_contract_version": AKTA_REVIEW_CONTRACT_VERSION,
+        "production_mode": is_production_mode(),
+    }
+    validate_artifact(summary, "scope_akta_review_session_summary.schema.json")
+    with summary_path.open("w", encoding="utf-8") as fh:
+        json.dump(summary, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    return summary
+
+
 def run_akta_review(
     engine: ScopeEngine,
     *,
@@ -114,6 +162,7 @@ def run_akta_review(
     out_dir: str | Path,
     signing_key: str | Path | None = None,
     signing_provider: str | None = None,
+    reviewer_id: str | None = None,
     queue_dir: str | Path | None = None,
     identity_token: str | None = None,
     session_mode: bool = False,
@@ -130,19 +179,26 @@ def run_akta_review(
         with Path(reviewer).open(encoding="utf-8") as fh:
             reviewer_data = json.load(fh)
 
-    _check_multi_role_requirement(engine, packet)
+    resolved_reviewer_id = _resolve_reviewer_id(reviewer_data, reviewer_id)
 
     if session_mode:
         session = engine.create_review_session(packet)
-        return {
-            "status": "session_required",
-            "packet_id": packet["packet_id"],
-            "session_id": session.session_id,
-            "required_roles": resolve_review_assignment(packet, engine.policy).get(
-                "required_roles", []
-            ),
-            "message": "Multi-role review session created; submit votes before grant issue.",
-        }
+        required_roles = resolve_review_assignment(packet, engine.policy).get(
+            "required_roles", []
+        )
+        packet_path = out / "scope_review_packet.json"
+        with packet_path.open("w", encoding="utf-8") as fh:
+            json.dump(packet, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        return _write_session_summary(
+            out,
+            packet=packet,
+            session_id=session.session_id,
+            required_roles=required_roles,
+            packet_path=packet_path,
+        )
+
+    _check_multi_role_requirement(engine, packet)
 
     if engine.ledger.path:
         engine.open_review(packet["packet_id"], actor_id=reviewer_data.get("reviewer_id"))
@@ -162,7 +218,7 @@ def run_akta_review(
         engine,
         signing_key=signing_key,
         signing_provider=signing_provider,
-        reviewer_id=str(reviewer_data.get("reviewer_id", "")),
+        reviewer_id=resolved_reviewer_id,
     )
     if is_production_mode():
         if signer is None:
