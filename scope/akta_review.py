@@ -103,24 +103,37 @@ def _resolve_signer(
     return None
 
 
-def _resolve_reviewer_id(
+def resolve_reviewer_id(
     reviewer_data: dict[str, Any],
     reviewer_id: str | None,
 ) -> str:
-    """Validate optional CLI reviewer_id against reviewer artifact."""
+    """Resolve and validate reviewer identity for all AKTA review entry points."""
     artifact_id = reviewer_data.get("reviewer_id")
     if reviewer_id is not None:
         if not artifact_id:
             raise ScopeValidationError("Reviewer artifact missing reviewer_id")
         if str(reviewer_id) != str(artifact_id):
             raise ScopeValidationError(
-                f"--reviewer-id {reviewer_id!r} does not match reviewer artifact "
+                f"reviewer_id {reviewer_id!r} does not match reviewer artifact "
                 f"reviewer_id {artifact_id!r}"
             )
         return str(reviewer_id)
     if not artifact_id:
         raise ScopeValidationError("Reviewer artifact missing reviewer_id")
     return str(artifact_id)
+
+
+def validate_summary_artifact(summary: dict[str, Any]) -> None:
+    """Validate summary against the schema for its status branch."""
+    status = summary.get("status")
+    if status == "completed":
+        validate_artifact(summary, "scope_akta_review_summary.schema.json")
+    elif status == "session_required":
+        validate_artifact(summary, "scope_akta_review_session_summary.schema.json")
+    else:
+        raise ScopeValidationError(
+            f"summary.status must be 'completed' or 'session_required', got {status!r}"
+        )
 
 
 def _write_session_summary(
@@ -144,7 +157,7 @@ def _write_session_summary(
         "adapter_contract_version": AKTA_REVIEW_CONTRACT_VERSION,
         "production_mode": is_production_mode(),
     }
-    validate_artifact(summary, "scope_akta_review_session_summary.schema.json")
+    validate_summary_artifact(summary)
     with summary_path.open("w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2, sort_keys=True)
         fh.write("\n")
@@ -179,7 +192,7 @@ def run_akta_review(
         with Path(reviewer).open(encoding="utf-8") as fh:
             reviewer_data = json.load(fh)
 
-    resolved_reviewer_id = _resolve_reviewer_id(reviewer_data, reviewer_id)
+    resolved_reviewer_id = resolve_reviewer_id(reviewer_data, reviewer_id)
 
     if session_mode:
         session = engine.create_review_session(packet)
@@ -283,7 +296,7 @@ def run_akta_review(
     }
     if queue_entry is not None:
         summary["queue_id"] = queue_entry.queue_id
-    validate_artifact(summary, "scope_akta_review_summary.schema.json")
+    validate_summary_artifact(summary)
     with summary_path.open("w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2, sort_keys=True)
         fh.write("\n")
