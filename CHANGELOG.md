@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.1 (2026-06-29)
+
+Contract hardening and verifiable pilot fixtures:
+
+- **Summary contract split**: `scope_akta_review_summary.schema.json` (status `completed` only) and `scope_akta_review_session_summary.schema.json` (status `session_required` only); consumers branch on `summary.status`; `validate_summary_artifact()` in `scope/akta_review.py`
+- **Conditional session grant provenance**: `scope_grant.schema.json` if/then requires full session provenance block when `contributing_identity_assurance_levels` present; runtime check in `scope/session_provenance.py`
+- **Reviewer-ID binding**: centralized `resolve_reviewer_id()` used by CLI, REST, and Python API
+- **Verifiable pilot fixture pack**: `manifest.json` and `expected_verification.json` per scenario; `scripts/verify_pilot_fixtures.py` for offline validation
+- AKTA review contract bumped to `scope-akta-review-v0.8.1` (incompatible summary schema split)
+
 ## v0.8.0 (2026-06-29)
 
 Session workflow and provenance release:
