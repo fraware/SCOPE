@@ -212,6 +212,11 @@ class AktaReviewRequest(BaseModel):
     decision_rationale: str
     out_dir: str | None = None
     signing_key_path: str | None = None
+    signing_provider: str | None = None
+    reviewer_id: str | None = None
+    identity_token: str | None = None
+    queue_dir: str | None = None
+    session_mode: bool = False
 
 
 def _http_error(exc: Exception) -> HTTPException:
@@ -397,6 +402,11 @@ def akta_review(req: AktaReviewRequest) -> dict[str, Any]:
             decision_rationale=req.decision_rationale,
             out_dir=out_dir,
             signing_key=req.signing_key_path,
+            signing_provider=req.signing_provider,
+            reviewer_id=req.reviewer_id,
+            identity_token=req.identity_token,
+            queue_dir=req.queue_dir,
+            session_mode=req.session_mode,
         )
         return summary
     except HTTPException:
