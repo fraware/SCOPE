@@ -1,4 +1,4 @@
-"""Tests for --reviewer-id binding in akta review (SCOPE-2)."""
+"""Tests for --reviewer-id binding in akta review (SCOPE-3)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import yaml
 from click.testing import CliRunner
 
 from scope import ScopeEngine
-from scope.akta_review import run_akta_review
+from scope.akta_review import resolve_reviewer_id, run_akta_review
 from scope.cli import main
 from scope.errors import ScopeValidationError
 from scope.key_registry import register_reviewer_key
@@ -33,6 +33,14 @@ def _policy_with_registry_signer(tmp_path: Path) -> tuple[Path, Path]:
     registry["reviewers"]["reviewer_001"]["signing_key_path"] = str(key)
     registry_path.write_text(yaml.safe_dump(registry, sort_keys=False), encoding="utf-8")
     return policy_dir, key
+
+
+def test_resolve_reviewer_id_centralized_helper() -> None:
+    reviewer = {"reviewer_id": "reviewer_001", "role": "protocol_owner"}
+    assert resolve_reviewer_id(reviewer, None) == "reviewer_001"
+    assert resolve_reviewer_id(reviewer, "reviewer_001") == "reviewer_001"
+    with pytest.raises(ScopeValidationError, match="does not match"):
+        resolve_reviewer_id(reviewer, "wrong_id")
 
 
 def test_reviewer_id_mismatch_fails(tmp_path: Path) -> None:
