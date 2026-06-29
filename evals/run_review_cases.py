@@ -1,4 +1,4 @@
-"""Evaluation scenario runner for SCOPE v0.7."""
+"""Evaluation scenario runner for SCOPE v0.8."""
 
 from __future__ import annotations
 
@@ -233,6 +233,7 @@ def _run_akta_review_scenario(
     from scope.schema_util import validate_artifact
 
     name = scenario["name"]
+    session_mode = bool(scenario.get("session_mode"))
     with tempfile.TemporaryDirectory() as out_dir:
         signing_key: Path | None = None
         if scenario.get("sign_before_grant"):
@@ -249,7 +250,25 @@ def _run_akta_review_scenario(
             decision_rationale=scenario["decision"]["rationale"],
             out_dir=out_dir,
             signing_key=signing_key,
+            session_mode=session_mode,
         )
+
+        if session_mode:
+            validate_artifact(summary, "scope_akta_review_session_summary.schema.json")
+            if summary.get("status") != "session_required":
+                return ScenarioResult(
+                    name,
+                    False,
+                    f"Expected session_required, got {summary.get('status')}",
+                )
+            if not summary.get("session_id", "").startswith("SCOPE-SESS-"):
+                return ScenarioResult(name, False, "Missing session_id")
+            packet_path = Path(summary["packet_path"])
+            if not packet_path.is_file():
+                return ScenarioResult(name, False, "Missing packet_path artifact")
+            if Path(out_dir, "scope_grant.json").is_file():
+                return ScenarioResult(name, False, "Grant should not be issued in session mode")
+            return ScenarioResult(name, True, "AKTA session summary contract OK")
 
         validate_artifact(summary, "scope_akta_review_summary.schema.json")
         expected_sal = scenario.get("expect_signing_assurance_level")
@@ -495,6 +514,7 @@ EXTENDED_SCENARIOS = [
     "queue_invalid_transition.json",
     "fail_closed_grant_blocked.json",
     "akta_review_signed_summary.json",
+    "akta_review_session_mode.json",
 ]
 
 
@@ -515,7 +535,7 @@ def main() -> int:
     parser.add_argument(
         "--extended",
         action="store_true",
-        help="Also run extended v0.7 scenarios (IAL, SAL, queue, ledger, AKTA contract)",
+        help="Also run extended v0.8 scenarios (IAL, SAL, queue, ledger, AKTA contract)",
     )
     args = parser.parse_args()
 
