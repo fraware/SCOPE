@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from scope.schema_util import validate_artifact
 from scope.integration_versions import AKTA_REVIEW_CONTRACT_VERSION
+from scope.schema_util import validate_artifact
 
 ROOT = Path(__file__).resolve().parent.parent
 PILOT = ROOT / "examples" / "pilot"

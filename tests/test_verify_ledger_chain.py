@@ -7,7 +7,6 @@ from pathlib import Path
 
 from scope import ScopeEngine
 from scope.errors import LedgerError
-
 from scripts.verify_ledger_chain import verify_ledger_chain
 
 
