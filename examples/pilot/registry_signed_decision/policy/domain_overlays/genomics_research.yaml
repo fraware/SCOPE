@@ -1,0 +1,15 @@
+version: scope-overlay-v0.6
+overlay_id: genomics_research
+description: Genomics research overlay requiring biosecurity co-review on tool mutations.
+mandatory_session_roles:
+  - biosecurity_reviewer
+matrix_overrides:
+  A8_tool_or_workflow_mutation:
+    required_roles:
+      - system_owner
+      - domain_scientist
+      - biosecurity_reviewer
+    require_all: true
+notes: |
+  Institutional genomics labs may enable this overlay via scientific_context.domain_overlay.
+  Biosecurity reviewer participation is mandatory for workflow permission changes.
