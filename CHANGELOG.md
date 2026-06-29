@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.8.0 (2026-06-29)
+
+Session workflow and provenance release:
+
+- **`scope akta review --session`**: multi-role packets create a review session first; session summary schema (`scope_akta_review_session_summary.schema.json`)
+- **`--reviewer-id` binding**: CLI and REST pass reviewer ID to `run_akta_review()`; must match reviewer artifact for registry signing
+- **Session grant provenance**: `scope/session_provenance.py` aggregates contributing IAL/SAL, authority checks, veto roles, and quorum policy hash on session grants
+- **Pilot fixture pack**: `examples/pilot/` with five institutional scenarios
+- Quality report `report_version` `0.8`
+- Policy bundle tagged `scope-core-v0.8`; AKTA review contract `scope-akta-review-v0.8`
+
 ## v0.7.0 (2026-06-28)
 
 Institutional pilot hardening release:
