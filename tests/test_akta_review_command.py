@@ -54,7 +54,7 @@ def test_akta_review_command_happy_path(tmp_path):
     assert summary["decision_path"].endswith("scope_decision.json")
     assert summary["grant_path"].endswith("scope_grant.json")
     assert summary["approved_scope"] == "protocol_draft"
-    assert summary["adapter_contract_version"] == "scope-akta-review-v0.7"
+    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8"
     assert summary["identity_assurance_level"] == "IAL0"
     assert "signing_assurance_level" in summary
     assert isinstance(summary["blocked_tools"], list)
