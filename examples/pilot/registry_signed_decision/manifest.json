@@ -2,7 +2,7 @@
   "scenario": "registry_signed_decision",
   "scope_version": "0.8.1",
   "policy_version": "scope-core-v0.8",
-  "akta_review_contract_version": "scope-akta-review-v0.8.1",
+  "akta_review_contract_version": "scope-akta-review-v1.0",
   "artifacts": [
     {
       "path": "scope_review_packet.json",

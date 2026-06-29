@@ -12,6 +12,7 @@ from scope import ScopeEngine
 from scope.akta_review import run_akta_review
 from scope.cli import main
 from scope.errors import ScopeValidationError
+from scope.integration_versions import AKTA_REVIEW_CONTRACT_VERSION
 from scope.schema_util import validate_artifact
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -74,7 +75,7 @@ def test_multi_role_with_session_creates_session(tmp_path: Path) -> None:
 
     on_disk = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
     validate_artifact(on_disk, "scope_akta_review_session_summary.schema.json")
-    assert on_disk["adapter_contract_version"] == "scope-akta-review-v0.8.1"
+    assert on_disk["adapter_contract_version"] == AKTA_REVIEW_CONTRACT_VERSION
 
 
 def test_akta_review_cli_session_flag(tmp_path: Path) -> None:

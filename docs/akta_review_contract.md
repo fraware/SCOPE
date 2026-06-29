@@ -1,6 +1,12 @@
 # AKTA Review Output Contract
 
-SCOPE v0.8.1 splits the `scope akta review` output contract by `summary.status`.
+SCOPE v1.0 splits the `scope akta review` output contract by `summary.status`.
+
+## Contract version
+
+**Frozen at v1.0:** `scope-akta-review-v1.0` (`scope.integration_versions.AKTA_REVIEW_CONTRACT_VERSION`).
+
+Backward compatible with v0.8.1 and v0.9 consumers when branching on `summary.status`.
 
 ## Branching rule
 
@@ -13,7 +19,7 @@ Consumers **must** branch on `summary.status`:
 
 The two schemas are mutually exclusive: completed summaries cannot carry session fields (`session_id`, `required_roles`, `message`); session summaries cannot carry grant/decision fields (`decision_path`, `grant_path`, `approved_scope`, IAL/SAL, etc.).
 
-Contract version constant: `scope-akta-review-v0.8.1` (`scope.integration_versions.AKTA_REVIEW_CONTRACT_VERSION`).
+Contract version constant: `scope-akta-review-v1.0` (`scope.integration_versions.AKTA_REVIEW_CONTRACT_VERSION`).
 
 ## Artifacts
 
@@ -36,7 +42,7 @@ Required fields:
   "grant_path": "...",
   "approved_scope": "...",
   "requested_scope": "...",
-  "adapter_contract_version": "scope-akta-review-v0.8.1",
+  "adapter_contract_version": "scope-akta-review-v1.0",
   "identity_assurance_level": "IAL0",
   "signing_assurance_level": "SAL1",
   "production_mode": false
@@ -60,7 +66,7 @@ Required fields:
   "session_id": "SCOPE-SESS-...",
   "required_roles": ["domain_scientist", "protocol_owner"],
   "message": "Multi-role review session created; submit votes before grant issue.",
-  "adapter_contract_version": "scope-akta-review-v0.8.1",
+  "adapter_contract_version": "scope-akta-review-v1.0",
   "production_mode": false
 }
 ```

@@ -149,6 +149,6 @@ def test_post_approval_runtime_violation_rate(tmp_path):
         },
     )
     grant = engine.issue_grant(packet, decision)
-    engine.check_grant(grant, "robot_queue.submit", {})
+    engine.record_runtime_violation(grant["grant_id"], tool="robot_queue.submit", reason="test")
     report = engine.quality_report()
     assert report["metrics"]["post_approval_runtime_violation_rate"] > 0

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from scope import ScopeEngine
+from scope._version import __version__
 
 ROOT = Path(__file__).resolve().parent.parent
 PILOT = ROOT / "examples" / "institutional_pilot"
@@ -15,7 +16,7 @@ def test_institutional_pilot_packet_regenerates():
     trigger = json.loads((PILOT / "review_trigger.json").read_text(encoding="utf-8"))
     packet = engine.create_packet(record, trigger)
     assert packet["review_request"]["scientific_action_type"] == "A5_protocol_modification"
-    assert packet["packet_version"] == "0.8.1"
+    assert packet["packet_version"] == __version__
     fixture = json.loads((PILOT / "scope_packet.json").read_text(encoding="utf-8"))
     for key in (
         "packet_version",

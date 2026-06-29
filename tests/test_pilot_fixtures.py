@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from scope.schema_util import validate_artifact
+from scope.integration_versions import AKTA_REVIEW_CONTRACT_VERSION
 
 ROOT = Path(__file__).resolve().parent.parent
 PILOT = ROOT / "examples" / "pilot"
@@ -105,7 +106,7 @@ def test_pilot_summary_contract(scenario: str) -> None:
     spec = SCENARIOS[scenario]
     summary = json.loads((PILOT / scenario / "summary.json").read_text(encoding="utf-8"))
     assert summary["status"] == spec["summary_status"]
-    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8.1"
+    assert summary["adapter_contract_version"] == AKTA_REVIEW_CONTRACT_VERSION
     schema = (
         "scope_akta_review_session_summary.schema.json"
         if spec["summary_status"] == "session_required"

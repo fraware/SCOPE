@@ -9,6 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from scope.cli import main
+from scope.integration_versions import AKTA_REVIEW_CONTRACT_VERSION
 
 ROOT = Path(__file__).resolve().parent.parent
 EX = ROOT / "examples" / "protocol_drift"
@@ -54,7 +55,7 @@ def test_akta_review_command_happy_path(tmp_path):
     assert summary["decision_path"].endswith("scope_decision.json")
     assert summary["grant_path"].endswith("scope_grant.json")
     assert summary["approved_scope"] == "protocol_draft"
-    assert summary["adapter_contract_version"] == "scope-akta-review-v0.8.1"
+    assert summary["adapter_contract_version"] == AKTA_REVIEW_CONTRACT_VERSION
     assert summary["identity_assurance_level"] == "IAL0"
     assert "signing_assurance_level" in summary
     assert isinstance(summary["blocked_tools"], list)
