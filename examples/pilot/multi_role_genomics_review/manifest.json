@@ -1,0 +1,25 @@
+{
+  "scenario": "multi_role_genomics_review",
+  "scope_version": "0.8.1",
+  "policy_version": "scope-core-v0.8",
+  "akta_review_contract_version": "scope-akta-review-v0.8.1",
+  "artifacts": [
+    {
+      "path": "scope_review_packet.json",
+      "schema": "scope_packet.schema.json"
+    },
+    {
+      "path": "summary.json",
+      "schema": "scope_akta_review_session_summary.schema.json"
+    },
+    {
+      "path": "decision_protocol_owner.json"
+    },
+    {
+      "path": "decision_domain_scientist.json"
+    },
+    {
+      "path": "quality_report_snippet.json"
+    }
+  ]
+}
