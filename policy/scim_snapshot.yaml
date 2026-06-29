@@ -1,4 +1,4 @@
-version: scope-core-v0.10
+version: scope-core-v1.0
 description: SCIM directory snapshot for RBAC sync (import-only; not live SCIM API).
 users:
   - id: ds1
