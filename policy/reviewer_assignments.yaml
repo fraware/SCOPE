@@ -1,4 +1,4 @@
-version: scope-core-v0.7
+version: scope-core-v0.8
 description: Default reviewer assignments by role for auto-assignment.
 assignments:
   domain_scientist: ds1
