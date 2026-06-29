@@ -1,0 +1,14 @@
+{
+  "adapter_contract_version": "scope-akta-review-v0.8",
+  "message": "Multi-role review session created; submit votes before grant issue.",
+  "packet_id": "SCOPE-PKT-42A16F",
+  "packet_path": "examples/pilot/multi_role_genomics_review/scope_review_packet.json",
+  "production_mode": false,
+  "requested_scope": "single_validation_run_draft",
+  "required_roles": [
+    "domain_scientist",
+    "protocol_owner"
+  ],
+  "session_id": "SCOPE-SESS-26AC2A",
+  "status": "session_required"
+}
