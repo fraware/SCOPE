@@ -1,0 +1,18 @@
+{
+  "checksums": {
+    "quality_report_snippet.json": "sha256:be1186b24dbd1dda1e9bb9610d221e282e990be17723f6fbea9cc4388b338308",
+    "scope_decision.json": "sha256:b8becf4dc97c19a6474e8d489271ab5e6928447130bc28d2f72b2ddbc1271454",
+    "scope_grant.json": "sha256:09ca975d1728cc5ae6ddfbfa28e73f22411badfa8edadd0060e284182038a673",
+    "scope_review_packet.json": "sha256:b7052c64e809b1ca43b4dfc7900e3db788e23abb564dfff05d3f8186dc4078da",
+    "summary.json": "sha256:988e437ccde5c669c2352bc6d6487aac6b7cc8a206f565adb5d3150f3615873e"
+  },
+  "forbidden_files": [],
+  "quality_report_snippet": {
+    "policy_version": "scope-core-v0.8"
+  },
+  "summary": {
+    "adapter_contract_version": "scope-akta-review-v0.8.1",
+    "approved_scope": "protocol_draft",
+    "status": "completed"
+  }
+}
