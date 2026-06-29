@@ -1,0 +1,25 @@
+{
+  "adapter_contract_version": "scope-akta-review-v0.8",
+  "allowed_tools": [
+    "protocol_editor.draft_change"
+  ],
+  "approved_scope": "protocol_draft",
+  "blocked_tools": [
+    "lab_scheduler.prioritize",
+    "protocol_editor.update_active_protocol",
+    "robot_queue.submit"
+  ],
+  "decision_id": "SCOPE-DEC-6A5596",
+  "decision_path": "c:\\Users\\mateo\\SCOPE\\examples\\pilot\\registry_signed_decision\\scope_decision.json",
+  "decision_type": "approve_narrower_scope",
+  "grant_id": "SCOPE-GRANT-2E7A58",
+  "grant_path": "c:\\Users\\mateo\\SCOPE\\examples\\pilot\\registry_signed_decision\\scope_grant.json",
+  "identity_assurance_level": "IAL1",
+  "packet_id": "SCOPE-PKT-CBFEF4",
+  "packet_path": "c:\\Users\\mateo\\SCOPE\\examples\\pilot\\registry_signed_decision\\scope_review_packet.json",
+  "production_mode": false,
+  "requested_scope": "active_protocol_update",
+  "scope_trust_root_hash": "sha256:9b28e2d9bcabdc76e9db48dc9edbe3e62e87f46f55cd26c017233debb69ddc77",
+  "signing_assurance_level": "SAL3",
+  "status": "completed"
+}
