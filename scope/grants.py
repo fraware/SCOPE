@@ -153,5 +153,9 @@ class GrantEngine:
         return True, None, None
 
     def validate(self, grant: dict[str, Any]) -> None:
+        from scope.session_provenance import validate_session_grant_provenance
+
+        provenance = grant.get("provenance") or {}
+        validate_session_grant_provenance(provenance)
         if self.schema:
             jsonschema.validate(instance=grant, schema=self.schema)
