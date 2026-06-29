@@ -103,6 +103,7 @@
         },
         "contributing_identity_assurance_levels": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
             "required": ["decision_id", "reviewer_id", "identity_assurance_level"],
@@ -121,6 +122,7 @@
         },
         "contributing_authority_checks": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
             "required": ["decision_id", "reviewer_id", "authority_checks"],
@@ -152,5 +154,37 @@
     },
     "grant_hash": { "type": "string", "pattern": "^sha256:" }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": {
+              "contributing_identity_assurance_levels": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "required": ["contributing_identity_assurance_levels"]
+          }
+        },
+        "required": ["provenance"]
+      },
+      "then": {
+        "properties": {
+          "provenance": {
+            "required": [
+              "contributing_identity_assurance_levels",
+              "contributing_authority_checks",
+              "minimum_identity_assurance_level",
+              "minimum_signing_assurance_level",
+              "veto_roles_applied",
+              "quorum_policy_hash"
+            ]
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": true
 }
