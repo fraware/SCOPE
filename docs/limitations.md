@@ -1,5 +1,13 @@
 # Limitations
 
+## Implemented in v0.8
+
+- `scope akta review --session` for multi-role packets: session summary schema, explicit failure without `--session`
+- `--reviewer-id` binding for registry signing (must match reviewer artifact)
+- Session grant provenance aggregation: contributing IAL/SAL, authority checks, veto roles, quorum policy hash
+- Pilot fixture pack under `examples/pilot/` (five institutional scenarios)
+- Policy bundle `scope-core-v0.8`; AKTA review contract `scope-akta-review-v0.8`
+
 ## Implemented in v0.7
 
 - Identity assurance levels (IAL0–IAL4) with provenance on decisions and grants
