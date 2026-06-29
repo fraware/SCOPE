@@ -35,10 +35,21 @@ pip install -e ".[dev]"
 ruff check scope tests evals adapters
 mypy scope
 pytest
-python evals/run_review_cases.py
+python evals/run_review_cases.py --extended
+python scripts/verify_pilot_fixtures.py
 ```
 
 Ensure `pyproject.toml` is saved as UTF-8 **without** a BOM (a BOM breaks `pip install -e`).
+
+### Optional live ecosystem CI
+
+When sibling repos are available locally, set repository variables or secrets:
+
+- `AKTA_REPO_PATH`
+- `PF_CORE_REPO_PATH`
+- `PCS_CORE_REPO_PATH`
+
+The optional `live-ecosystem` CI job runs cross-repo contract validation. Default CI remains green without these paths.
 
 ## Pull requests
 
@@ -53,4 +64,4 @@ Ensure `pyproject.toml` is saved as UTF-8 **without** a BOM (a BOM breaks `pip i
 - Minimal, focused diffs
 - Match existing module structure
 
-See [docs/limitations.md](docs/limitations.md) for v0.1 scope boundaries.
+See [docs/limitations.md](docs/limitations.md) for scope boundaries and [GOVERNANCE.md](GOVERNANCE.md) for release policy.
