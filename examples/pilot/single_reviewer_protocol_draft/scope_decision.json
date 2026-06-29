@@ -1,0 +1,59 @@
+{
+  "confidence": {
+    "requires_second_review": false,
+    "reviewer_confidence": 0.5
+  },
+  "decided_at": "2026-06-29T09:19:13Z",
+  "decision": {
+    "approved_scope": "protocol_draft",
+    "rationale": "Pilot single-reviewer protocol draft approval.",
+    "rejected_scope": [
+      "protocol_diff_review",
+      "single_validation_plan",
+      "single_validation_run_draft",
+      "active_protocol_update",
+      "single_run_queue_priority",
+      "bounded_batch_priority",
+      "tool_permission_escalation",
+      "execution_payload_preparation",
+      "robot_queue_submission",
+      "publication_claim",
+      "scientific_memory_import"
+    ],
+    "type": "approve_narrower_scope"
+  },
+  "decision_hash": "sha256:d2ed694763dfa1ac3275c717f69aef08ab03853eefe0c80f5c5e5cf0525adfb0",
+  "decision_id": "SCOPE-DEC-874920",
+  "expiration": {
+    "expires_on": [
+      "protocol_version_change",
+      "evidence_state_change",
+      "policy_version_change"
+    ],
+    "mode": "event_based"
+  },
+  "packet_id": "SCOPE-PKT-D2FA4B",
+  "provenance": {
+    "authority_checks": {
+      "delegation_id": null,
+      "rbac_enforced": false,
+      "rbac_role_valid": false,
+      "scope_approval_valid": true,
+      "scope_role_valid": true
+    },
+    "identity_assurance_level": "IAL0",
+    "identity_source": "caller_json",
+    "reviewer_key_registry_hash": "sha256:13f8cdcc054ca19f6a2560cd9ae688c39ac289ddf3f2d3da4e6dd0081e883692",
+    "reviewer_key_registry_version": "scope-core-v0.8",
+    "role_resolution_source": "caller_supplied",
+    "scope_policy_hash": "sha256:68e578ddc7a35d2cfa38c5cb95bc51182d8801548158a28b35ca1e7a035e28ea",
+    "scope_policy_version": "scope-core-v0.8",
+    "scope_trust_root_hash": "sha256:6334c56aa73915315692177499c217399e2895bbab1ed6794040b1a2d49f0a77"
+  },
+  "reviewer": {
+    "conflict_declared": false,
+    "declared_expertise": [],
+    "reviewer_id": "reviewer_protocol_owner_drift",
+    "role": "protocol_owner"
+  }
+}
