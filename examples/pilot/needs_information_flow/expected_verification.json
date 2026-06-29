@@ -1,0 +1,21 @@
+{
+  "checksums": {
+    "quality_report_snippet.json": "sha256:be1186b24dbd1dda1e9bb9610d221e282e990be17723f6fbea9cc4388b338308",
+    "review_queue_in_review.json": "sha256:1d496f351bd82c46f6eaa3ffd7522461c5996cc9b5f54c15b7b383ebc5a81d39",
+    "review_queue_needs_information.json": "sha256:44c58e41aba993d81a90a8e0460b57f19d126daec54cc37b2f93be2fdd40c7c1",
+    "scope_review_packet.json": "sha256:24a7519aff68a84d66b7bb4e95aa549fdd07d899e00e9cc154633f2dd7fd62d0"
+  },
+  "quality_report_snippet": {
+    "policy_version": "scope-core-v0.8"
+  },
+  "queue_states": {
+    "review_queue_in_review.json": {
+      "packet_id": "SCOPE-PKT-92CBAD",
+      "status": "in_review"
+    },
+    "review_queue_needs_information.json": {
+      "packet_id": "SCOPE-PKT-92CBAD",
+      "status": "needs_information"
+    }
+  }
+}
